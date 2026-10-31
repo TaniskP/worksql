@@ -18,10 +18,11 @@ function form(obj, prefix = '', out = new URLSearchParams()) {
 async function call(method, path, body) {
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) throw new Error('STRIPE_SECRET_KEY is not set');
-  const res = await fetch(`${API}${path}`, {
+  const qs = method === 'GET' && body ? `?${form(body)}` : '';
+  const res = await fetch(`${API}${path}${qs}`, {
     method,
     headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: body ? form(body) : undefined,
+    body: method === 'GET' || !body ? undefined : form(body),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(`Stripe ${method} ${path}: ${data.error ? data.error.message : res.status}`);
@@ -32,6 +33,8 @@ const stripe = {
   createCheckoutSession: (params) => call('POST', '/checkout/sessions', params),
   getCheckoutSession: (id) => call('GET', `/checkout/sessions/${encodeURIComponent(id)}`),
   createPortalSession: (params) => call('POST', '/billing_portal/sessions', params),
+  listCustomers: (params) => call('GET', '/customers', params),
+  listSubscriptions: (params) => call('GET', '/subscriptions', params),
 };
 
 // Stripe-Signature: t=1700000000,v1=hex[,v1=hex]. Signed payload is `${t}.${rawBody}`, HMAC-SHA256 with the

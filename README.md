@@ -64,6 +64,8 @@ No passwords, no magic links, no accounts product:
    URL alone) and sets a signed, HttpOnly cookie.
 4. That cookie unlocks Tuesday onwards. `/api/run` refuses paid tickets with a 402 without it, so it's enforced on the
    server, not just hidden in the page. Paid members get a Manage subscription button (Stripe's billing portal) and Sign out.
+5. Cleared cookies: **Already paid?** on Pricing. They type the checkout email. The server emails a 15-minute link
+   (never unlocks from the form). Opening the link sets the cookie. Same reply whether or not that email has paid.
 
 Code: `src/payments.js` (the flow), `src/stripe.js` (REST calls and webhook signature checks, no SDK),
 `src/members.js`, `src/session.js` (the cookie), `src/access.js` (who can run what).
@@ -85,9 +87,7 @@ Test card: `4242 4242 4242 4242`, any future date, any CVC.
 
 ## Not done yet
 
-- Email: no provider wired, so nudges land in `outbox/`.
-- Access is per browser. Someone who paid and opens a new browser has no cookie there yet; restoring access on another
-  device (for example by emailing a sign-in link) isn't built.
+- Email: restore links and nudges use Resend when `EMAIL_API_KEY` and `EMAIL_FROM` are set; otherwise they land in `outbox/`.
 - Progress and streaks still live in the browser's localStorage, not on the server.
 - Members are kept in a JSON file, which is fine for one server; move to a database before running more than one.
 - On localhost (not in production), the lessons page has a dev-only toggle that makes the browser a paid member without Stripe.

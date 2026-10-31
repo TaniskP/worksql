@@ -151,6 +151,36 @@ export function devPlanToggle(el) {
 }
 
 // The "account" card: who's paid on this browser, Stripe's billing page, and signing out.
+const RESTORE_SENT = 'If that email has an active plan, a link is on its way. Open it on this device. It works for 15 minutes. Check spam too.';
+
+export function restoreForm(el) {
+  if (!el) return;
+  if (me.paid) { el.hidden = true; return; }
+  el.innerHTML = `<h3>Already paid?</h3>
+    <p style="margin-bottom:10px">Cleared cookies, or on a new phone? Enter the email you used at checkout. We’ll send a 15-minute link. Don’t buy again.</p>
+    <form class="nudge-form"><input type="email" required placeholder="you@work.com" aria-label="Email you paid with">
+    <button class="btn btn-ghost" type="submit">Email link</button></form>
+    <p class="nudge-msg muted-note" hidden></p>`;
+  el.querySelector('form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = el.querySelector('button');
+    const msg = el.querySelector('.nudge-msg');
+    btn.disabled = true;
+    msg.hidden = false;
+    msg.textContent = 'Sending…';
+    try {
+      const r = await fetch('/api/restore', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: el.querySelector('input').value }),
+      });
+      const data = await r.json();
+      msg.textContent = data.message || data.error || RESTORE_SENT;
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+
 export function accountCard(el, { freeHtml }) {
   if (!el) return;
   if (!me.paid) { el.innerHTML = freeHtml; return; }

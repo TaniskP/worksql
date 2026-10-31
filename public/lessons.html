@@ -38,6 +38,7 @@
           <p class="muted-note">Progress stays in this browser.</p>
         </div>
         <div class="card side-card" id="plan-card"></div>
+        <div class="card side-card" id="already-paid"></div>
         <div class="card side-card" id="nudge-card"></div>
         <p class="dev-note" id="dev"></p>
       </aside>
@@ -45,7 +46,7 @@
   </main>
 
   <script type="module">
-    import { icons, store, streakPill, esc, devPlanToggle, nudgeForm, pingNudge, accountCard } from '/js/common.js';
+    import { icons, store, streakPill, esc, devPlanToggle, nudgeForm, pingNudge, accountCard, restoreForm } from '/js/common.js';
     document.querySelector('[data-logo]').insertAdjacentHTML('afterbegin', icons.logo);
     document.getElementById('streak').innerHTML = streakPill();
     document.getElementById('last').textContent = store.lastSession() || '';
@@ -97,9 +98,10 @@
     accountCard(document.getElementById('plan-card'), {
       freeHtml: `<h3>Free plan</h3><p style="margin-bottom:14px">Monday is free. ${paidDays} more days, ${paidLessons.length} tickets, from about £6.60 a month.</p><a class="btn btn-primary" style="width:100%" href="/pricing">See plans</a>`,
     });
-    // Just back from Stripe Checkout.
-    if (new URLSearchParams(location.search).get('welcome') && paid) {
-      document.getElementById('paths').insertAdjacentHTML('afterbegin', `<div class="card welcome-card"><h2>You’re in.</h2>
+    restoreForm(document.getElementById('already-paid'));
+    const justIn = new URLSearchParams(location.search);
+    if ((justIn.get('welcome') || justIn.get('restored')) && paid) {
+      document.getElementById('paths').insertAdjacentHTML('afterbegin', `<div class="card welcome-card"><h2>${justIn.get('restored') ? 'Access restored.' : 'You’re in.'}</h2>
         <p>Every day of the week is unlocked on this browser. Tuesday’s inbox is waiting.</p>
         <a class="btn btn-primary" href="/work">Clock in</a></div>`);
       history.replaceState(null, '', '/lessons');

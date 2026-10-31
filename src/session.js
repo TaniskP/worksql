@@ -64,4 +64,4 @@ function whoIs(req) {
   return { email, paid: members.isActive(member), plan: member ? member.plan || null : null, member };
 }
 
-module.exports = { sign, verify, readCookie, setCookieHeader, clearCookieHeader, whoIs, COOKIE };
+module.exports = { sign, verify, readCookie, setCookieHeader, clearCookieHeader, whoIs, COOKIE, secret };

@@ -13,6 +13,7 @@ const nudges = require('./src/nudges');
 const session = require('./src/session');
 const members = require('./src/members');
 const { canRun, devUnlockAllowed, DEV_EMAIL } = require('./src/access');
+const restore = require('./src/restore');
 const { articles, renderArticle, renderIndex } = require('./src/articles');
 
 const PORT = Number(process.env.PORT) || 3000;
@@ -144,6 +145,13 @@ async function api(req, res, url) {
     return send(res, 200, { ok: true });
   }
 
+  if (req.method === 'POST' && p === '/api/restore') {
+    const { email: typed } = await readJson(req);
+    const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket.remoteAddress;
+    const out = await restore.request({ typed, origin: originOf(req), ip });
+    return send(res, out.status, out.body);
+  }
+
   // Local development: flip this browser between paid and free without going through Stripe.
   if (req.method === 'POST' && p === '/api/dev/plan') {
     if (!devUnlockAllowed(req)) return send(res, 403, { error: 'Not available.' });
@@ -205,7 +213,7 @@ function seoRoutes(req, res, url) {
     res.end(`User-agent: *\nDisallow: /api/\nSitemap: ${originOf(req)}/sitemap.xml\n`);
     return true;
   }
-  if (p === '/welcome') return true; // handled asynchronously in the request handler
+  if (p === '/welcome' || p === '/restore') return true; // handled asynchronously in the request handler
   if (p === '/unsubscribe') {
     const ok = nudges.unsubscribe(url.searchParams.get('t') || '');
     sendHtml(res, 200, `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Unsubscribed · WorkSQL</title>
@@ -230,11 +238,25 @@ async function welcome(req, res, url) {
     <p><a class="btn btn-primary" href="/welcome?session_id=${encodeURIComponent(url.searchParams.get('session_id') || '')}">Try again</a> <a class="btn btn-ghost" href="/pricing">Back to pricing</a></p></main>`);
 }
 
+// Already-paid link from email. The form never sets the cookie; this click does.
+async function restoreAccess(req, res, url) {
+  const member = restore.confirm(url.searchParams.get('token'));
+  if (member) {
+    res.writeHead(303, { Location: '/lessons?restored=1', 'Set-Cookie': session.setCookieHeader(member.email, { secure: isHttps(req) }) });
+    return res.end();
+  }
+  return sendHtml(res, 200, `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Restore · WorkSQL</title>
+    <link rel="stylesheet" href="/css/app.css"><main class="article"><h1>That link has expired.</h1>
+    <p>Ask for a new one from Pricing → Already paid. Links last 15 minutes.</p>
+    <p><a class="btn btn-primary" href="/pricing#already-paid">Already paid</a></p></main>`);
+}
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   try {
     if (url.pathname.startsWith('/api/')) return await api(req, res, url);
     if (url.pathname === '/welcome') return await welcome(req, res, url);
+    if (url.pathname === '/restore') return await restoreAccess(req, res, url);
     if (seoRoutes(req, res, url)) return;
     if (PAGES[url.pathname]) return serveFile(res, PAGES[url.pathname]);
     if (/^\/lesson\/\d+\/?$/.test(url.pathname)) return serveFile(res, 'lesson.html');

@@ -10,11 +10,18 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const OUTBOX = process.env.OUTBOX_DIR || path.join(__dirname, '..', 'outbox');
-const configured = () => Boolean(process.env.EMAIL_API_KEY && process.env.EMAIL_FROM);
+const apiKey = () => process.env.EMAIL_API_KEY || process.env.RESEND_API_KEY;
+const configured = () => Boolean(apiKey() && process.env.EMAIL_FROM);
 
-async function sendViaProvider() {
-  // TODO(email): call the provider here and return its message id.
-  throw new Error('Email provider not wired yet');
+async function sendViaProvider({ to, subject, html }) {
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey()}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from: process.env.EMAIL_FROM, to, subject, html }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || `Resend ${res.status}`);
+  return data;
 }
 
 async function send({ to, subject, html }) {

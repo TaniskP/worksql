@@ -32,6 +32,7 @@
     </div>
     <div class="plans" id="plans"></div>
     <p class="pricing-note">Prices in GBP. Yearly works out at about £6.60 a month.</p>
+    <div class="card" id="already-paid" style="max-width:480px;margin:28px auto 0;padding:22px 24px"></div>
   </section>
 
   <section class="band">
@@ -51,6 +52,7 @@
       <div><h3>What happens after Monday?</h3><p>Monday’s tickets stay yours. Your streak and progress stay in this browser. The paid tickets unlock when you pick a plan.</p></div>
       <div><h3>Is it real SQL Server?</h3><p>You write real T-SQL: TOP, ISNULL, GETDATE, DATEADD, CONVERT, square brackets, window functions. It runs in our sandbox against a fake company, never your data.</p></div>
       <div><h3>How strict is the marking?</h3><p>Strict. Extra columns, the wrong column names, a missing ORDER BY or a GROUP BY SQL Server would refuse all fail, with a note that says why.</p></div>
+      <div><h3>I paid, but this browser is locked.</h3><p>Clearing cookies signs you out. Use Already paid above with the email from checkout. We’ll send a 15-minute link. Don’t buy again.</p></div>
       <div><h3>Do I get a certificate?</h3><p>No exam theatre. If enough people ask, a simple “path complete” PDF.</p></div>
     </div>
   </section>
@@ -64,11 +66,12 @@
   </footer>
 
   <script type="module">
-    import { icons, getPlans, renderPlans, esc, store } from '/js/common.js';
+    import { icons, getPlans, renderPlans, esc, store, restoreForm } from '/js/common.js';
     document.querySelectorAll('[data-logo]').forEach((el) => el.insertAdjacentHTML('afterbegin', icons.logo));
 
     const [{ plans, paymentsLive }, { days, lessons }] = await Promise.all([getPlans(), fetch('/api/lessons').then((r) => r.json())]);
     renderPlans(document.getElementById('plans'), plans, paymentsLive);
+    restoreForm(document.getElementById('already-paid'));
 
     const paid = store.isPaid();
     document.getElementById('catalogue-title').textContent = `${days.length} working days, ${lessons.length} tickets, by name`;
