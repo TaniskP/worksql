@@ -78,7 +78,7 @@
       return `<div class="cat-path">
         <h3>Week ${d.week} · ${esc(d.name)} <span class="${free ? 'free-chip' : 'paid-chip'}">${free ? 'Free' : 'Paid'}</span></h3>
         <p><strong>${esc(d.title)}.</strong> ${ls.length} tickets.</p>
-        <ol>${ls.map((l) => `<li><span class="n">${l.n}</span><span><strong>${esc(l.topic)}</strong> — ${esc(l.blurb)}</span>${!l.free && !paid ? icons.lock : ''}</li>`).join('')}</ol>
+        <ol>${ls.map((l) => `<li><span class="n">${l.n}</span><span><strong>${esc(l.topic)}</strong> - ${esc(l.blurb)}</span>${!l.free && !paid ? icons.lock : ''}</li>`).join('')}</ol>
       </div>`;
     }).join('');
   </script>

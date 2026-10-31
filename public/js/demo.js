@@ -232,7 +232,7 @@ function results(rows, { highlightToday = false, status = '' } = {}) {
 // ================= the nine scenes =================
 const scenes = [
   {
-    title: 'Quiet inbox — one unread', short: 'Inbox',
+    title: 'Quiet inbox - one unread', short: 'Inbox',
     setup() { mount(mailShell(inbox(MAIL.slice(1).map((m) => mailItem(m))))); },
     async play() {
       await wait(900);
@@ -247,7 +247,7 @@ const scenes = [
     },
   },
   {
-    title: 'Open the email — read the task', short: 'Email',
+    title: 'Open the email - read the task', short: 'Email',
     setup() {
       mount(mailShell(`<article class="d-email">
         <header><span class="d-av" style="background:#7c3aed">JR</span><div><b>James Rowe</b><span>Sales Manager · To: Me</span></div><time>09:14</time></header>
@@ -276,7 +276,7 @@ const scenes = [
     },
   },
   {
-    title: 'Query window opens — tables at your side', short: 'Query window',
+    title: 'Query window opens - tables at your side', short: 'Query window',
     setup() {
       mount(ssmsShell());
       app.querySelector('.d-app').classList.add('opening');
@@ -295,7 +295,7 @@ const scenes = [
     },
   },
   {
-    title: 'Start writing — suggestions help', short: 'Write',
+    title: 'Start writing - suggestions help', short: 'Write',
     setup() {
       mount(ssmsShell({ ordersOpen: true }));
       setCode('');
@@ -334,7 +334,7 @@ ${WRONG_WHERE}${ORDER}`, text, { speed: 18 });
     },
   },
   {
-    title: 'First run — a common mistake', short: 'First run',
+    title: 'First run - a common mistake', short: 'First run',
     setup() {
       mount(ssmsShell({ ordersOpen: true }));
       setCode(WRONG_SQL, false);
@@ -353,7 +353,7 @@ ${WRONG_WHERE}${ORDER}`, text, { speed: 18 });
     },
   },
   {
-    title: 'Fix and run again — correct result', short: 'Fix',
+    title: 'Fix and run again - correct result', short: 'Fix',
     setup() {
       mount(ssmsShell({ ordersOpen: true }));
       setCode(WRONG_SQL, false);
@@ -410,7 +410,7 @@ ${WRONG_WHERE}${ORDER}`, text, { speed: 18 });
     },
   },
   {
-    title: 'Thread closed — back to the inbox', short: 'Closed',
+    title: 'Thread closed - back to the inbox', short: 'Closed',
     setup() {
       mount(mailShell(inbox([
         mailItem(MAIL[0], { cls: 'read', prev: 'You: Here are last week’s orders over £50…' }),
@@ -422,7 +422,7 @@ ${WRONG_WHERE}${ORDER}`, text, { speed: 18 });
       const item = $s('[data-k="james"]');
       item.classList.add('closed', 'flash');
       item.querySelector('.d-av').innerHTML = TICK;
-      item.querySelector('.d-prev').textContent = 'Thanks — that’s perfect. Going in the 10am.';
+      item.querySelector('.d-prev').textContent = 'Thanks - that’s perfect. Going in the 10am.';
       item.querySelector('.d-time').textContent = '09:32';
       sfx.ping();
       await wait(600);
@@ -432,10 +432,10 @@ ${WRONG_WHERE}${ORDER}`, text, { speed: 18 });
     },
   },
   {
-    title: 'What next — more real work', short: 'What next',
+    title: 'What next - more real work', short: 'What next',
     setup() {
       mount(mailShell(`<div class="d-split"><div>${inbox([
-        mailItem(MAIL[0], { cls: 'closed', prev: 'Thanks — that’s perfect.', avatar: TICK }),
+        mailItem(MAIL[0], { cls: 'closed', prev: 'Thanks - that’s perfect.', avatar: TICK }),
         ...MAIL.slice(1).map((m) => mailItem(m)),
       ])}</div><aside class="d-cta">
         <span class="d-lockbig">${LOCK}</span>

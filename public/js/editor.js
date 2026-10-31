@@ -27,7 +27,7 @@ export function highlight(sql) {
 }
 
 // root must contain .gutter, .code > pre, .code > textarea (and optionally .ghost).
-// keys: { 'F5': fn, 'Ctrl+Enter': fn, ... } — handled before the browser sees them.
+// keys: { 'F5': fn, 'Ctrl+Enter': fn, ... } - handled before the browser sees them.
 // schema: { TableName: ['col', ...] } turns on column suggestions (Ctrl+Space, or after "alias.").
 export function attachEditor(root, { onChange, keys = {}, minLines = 9, lineHeight = 21, fixedHeight = false, schema = null } = {}) {
   const ta = root.querySelector('textarea');

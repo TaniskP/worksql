@@ -156,7 +156,7 @@ function renderVerdict(v, { sqlError = false } = {}) {
     const wall = lesson.next && !lesson.next.free && lesson.free && !store.isPaid();
     box.innerHTML = `<div class="verdict ok">${icons.okCircle.replace('<svg', '<svg class="ic"')}
       <div class="msg"><strong>${esc(v.headline)} Sent to ${esc(firstName)}.</strong>
-        <span class="reply">“${esc(lesson.thanks)}” — ${esc(firstName)}</span>
+        <span class="reply">“${esc(lesson.thanks)}” - ${esc(firstName)}</span>
         ${wall ? `<span class="wall-note">That’s Monday done. Tuesday’s inbox has 6 tickets waiting, and the week runs on from there: ${paidCount} tickets over ${paidDays} days, on the paid plan.</span>` : ''}
       </div>
       <span class="time">${fmtTime(secs)} on this one.</span>${nextButton()}</div>`;

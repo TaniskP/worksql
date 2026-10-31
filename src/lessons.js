@@ -1,11 +1,11 @@
 // Every lesson is a ticket from someone at Harbour & Co.
 //
-// solution  — the reference query; its result is the expected answer.
-// orderBy   — expected sort key when order matters (checked by key, so ties are fine).
-// steps     — walkthroughs: earlier steps teach in pieces, the last step ({ final: true }) is the real ticket.
+// solution  - the reference query; its result is the expected answer.
+// orderBy   - expected sort key when order matters (checked by key, so ties are fine).
+// steps     - walkthroughs: earlier steps teach in pieces, the last step ({ final: true }) is the real ticket.
 //             A step can expect an error on purpose (expectError) or only need to run (loose).
-// starter   — text already in the editor (used for "fix your colleague's query" tickets).
-// diagnose  — lesson-specific explanation of a wrong answer, in the sender's voice.
+// starter   - text already in the editor (used for "fix your colleague's query" tickets).
+// diagnose  - lesson-specific explanation of a wrong answer, in the sender's voice.
 
 
 const P = {
