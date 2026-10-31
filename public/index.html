@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WorkSQL — Clock in. The inbox is waiting.</title>
+  <meta name="description" content="Practise SQL Server the way you use it at work: clock in, get tickets from colleagues, write T-SQL in a query window, send the results. Five minutes a ticket.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cellipse cx='16' cy='7' rx='11' ry='4' fill='%231f5eff'/%3E%3Cpath d='M5 7v18c0 2.2 4.9 4 11 4s11-1.8 11-4V7c0 2.2-4.9 4-11 4S5 9.2 5 7Z' fill='%231f5eff' opacity='.75'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+  <section class="hero">
+    <header class="site-header">
+      <nav class="nav">
+        <a href="/" class="logo" data-logo>WorkSQL</a>
+        <div class="nav-links">
+          <a href="#shift">How a shift works</a>
+          <a href="/lessons">Lessons</a>
+          <a href="/tsql">T-SQL reference</a>
+          <a href="#pricing">Pricing</a>
+        </div>
+        <div class="nav-actions">
+          <a href="/work" class="btn btn-primary" data-clockin>Clock in</a>
+        </div>
+      </nav>
+    </header>
+
+    <div class="hero-body">
+      <div class="hero-eyebrow"><span class="dot"></span> Harbour &amp; Co · <span id="hero-clock">09:14</span> · 1 new message</div>
+      <h1>Clock in.<span class="blue">James needs last week’s</span><span class="blue">orders by ten.</span></h1>
+      <p class="lead">SQL Server, five minutes. You write the query. We tell you if it’s right. No videos to zone out in front of: a ticket lands, you type, you send it back.</p>
+      <div class="hero-ctas">
+        <a href="/work" class="btn btn-primary btn-lg" data-clockin>Clock in free <span data-icon="arrow"></span></a>
+        <a href="/lessons" class="btn btn-ghost btn-lg">Learn step by step first</a>
+      </div>
+      <div class="small">No sign-up. Monday’s shift is free.</div>
+
+      <div class="hero-points">
+        <div><span data-icon="bolt"></span>You type,<br>every ticket</div>
+        <div><span data-icon="table"></span>Real T-SQL in<br>a query window</div>
+        <div><span data-icon="badge"></span>Marked like your<br>manager would</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="shift">
+    <div class="section-head">
+      <div class="eyebrow">How a shift works</div>
+      <h2>One ticket, start to finish.</h2>
+      <p>A message comes in. You write the query. You send the results. If it’s wrong, they tell you what’s wrong, the way a colleague would. If it’s right, the next one lands.</p>
+    </div>
+
+    <div class="demo" id="demo" aria-label="Animated demo: one ticket from inbox to reply"></div>
+
+    <ul class="shift-facts">
+      <li><b>One company.</b> Harbour &amp; Co: customers, orders, order lines, products, returns, staff. Messy, like real tables.</li>
+      <li><b>Strict marking.</b> SELECT * doesn’t pass. Extra columns, the wrong headers or a missing ORDER BY get sent back.</li>
+      <li><b>Real SQL Server habits.</b> TOP, ISNULL, GETDATE, square brackets, F5 to execute, errors worded like SSMS.</li>
+    </ul>
+  </section>
+
+  <section class="section split">
+    <div>
+      <div class="eyebrow">A working week, not a syllabus</div>
+      <h2 id="week-title">Monday’s free. Tuesday’s inbox: 6 tickets.</h2>
+      <p style="color:var(--ink-2);font-size:17px;margin:14px 0 0" id="week-blurb">Seven working days of about six tickets each. A walkthrough the first time you meet CASE, LEFT JOIN or a CTE, then two reps on your own. Five minutes a ticket is a month of days.</p>
+      <div class="hero-ctas" style="margin-top:28px">
+        <a href="/work" class="btn btn-primary btn-lg" data-clockin>Clock in free <span data-icon="arrow"></span></a>
+        <a href="/lessons" class="btn btn-ghost btn-lg">See every ticket</a>
+      </div>
+    </div>
+    <div class="card" style="padding:8px">
+      <ul class="lesson-list" id="preview-list" style="border:0"></ul>
+    </div>
+  </section>
+
+  <section class="band" id="pricing">
+    <div class="section">
+      <div class="section-head">
+        <div class="eyebrow">Pricing</div>
+        <h2>Monday is free. Then it stops.</h2>
+        <p>Ten tickets to learn the loop. The rest of the week is the tickets people actually get. <a href="/pricing" style="color:var(--blue)">See every ticket by name</a>.</p>
+      </div>
+      <div class="plans" id="plans"></div>
+      <p class="pricing-note">Prices in GBP. Yearly works out at about £6.60 a month.</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <div class="eyebrow">T-SQL reference</div>
+      <h2>Looking something up?</h2>
+      <p>Short pages on the SQL Server functions people search for at work, each with a ticket to try it on.</p>
+    </div>
+    <div class="ref-links" id="ref-links"></div>
+  </section>
+
+  <footer class="footer">
+    <div class="inner">
+      <a href="/" class="logo" data-logo style="font-size:16px">WorkSQL</a>
+      <span>SQL Server, five minutes.</span>
+      <div class="links"><a href="/work">Work mode</a><a href="/lessons">Lessons</a><a href="/tsql">T-SQL reference</a><a href="/pricing">Pricing</a></div>
+    </div>
+  </footer>
+
+  <script type="module">
+    import { icons, store, getPlans, renderPlans, esc } from '/js/common.js';
+    document.querySelectorAll('[data-logo]').forEach((el) => el.insertAdjacentHTML('afterbegin', icons.logo));
+    document.querySelectorAll('[data-icon]').forEach((el) => { el.outerHTML = icons[el.dataset.icon]; });
+
+    // Work mode needs a laptop-sized screen. On a phone, the door leads to the lessons instead.
+    if (matchMedia('(max-width: 960px)').matches) {
+      document.querySelectorAll('[data-clockin]').forEach((a) => { a.href = '/lessons'; a.firstChild.textContent = a.closest('nav') ? 'Start free ' : 'Start Monday free '; });
+    }
+    document.getElementById('hero-clock').textContent = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+
+    getPlans().then(({ plans, paymentsLive }) => renderPlans(document.getElementById('plans'), plans, paymentsLive));
+
+    // The week, as inboxes: what each day holds.
+    fetch('/api/lessons').then((r) => r.json()).then(({ days, lessons }) => {
+      const paid = store.isPaid();
+      document.getElementById('week-blurb').textContent = `${days.length} working days of about six tickets each: ${lessons.length} in all. A walkthrough the first time you meet CASE, LEFT JOIN or a CTE, then two reps on your own. Five minutes a ticket is a month of days.`;
+      document.getElementById('preview-list').innerHTML = days.map((d) => {
+        const ls = lessons.filter((l) => l.day === d.id);
+        const lock = !ls[0].free && !paid;
+        return `<li><a class="lesson-row${lock ? ' locked' : ''}" href="${lock ? '/pricing' : '/lessons#day-' + d.id}">
+          <span class="state">${lock ? icons.lock : d.id}</span><span class="n"></span>
+          <span class="topic">W${d.week} ${esc(d.name)}</span>
+          <span class="blurb">${ls.length} tickets · ${esc(d.title)}</span>
+          <span class="mins">${lock ? '<span class="paid-chip">Paid</span>' : '<span class="free-chip">Free</span>'}</span><span class="chev">${icons.chev}</span></a></li>`;
+      }).join('') + `<li><a class="lesson-row" href="/lessons" style="color:var(--blue);font-weight:600;display:block">See all ${lessons.length} tickets by name</a></li>`;
+    });
+
+    fetch('/api/articles').then((r) => r.json()).then(({ articles }) => {
+      document.getElementById('ref-links').innerHTML = articles.map((a) =>
+        `<a class="ref-link" href="/tsql/${a.slug}"><b>${esc(a.name)}</b><span>${esc(a.short)}</span></a>`).join('');
+    });
+  </script>
+  <script type="module" src="/js/demo.js"></script>
+</body>
+</html>

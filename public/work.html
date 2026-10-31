@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Work mode · Harbour &amp; Co</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
+  <link rel="stylesheet" href="/css/app.css">
+  <link rel="stylesheet" href="/css/work.css">
+</head>
+<body class="work">
+
+  <!-- ===== Clock in ===== -->
+  <section class="clockin" id="clockin">
+    <div class="clockin-left">
+      <div class="co-name">Harbour &amp; Co</div>
+      <div class="big-time" id="ci-time">08:58</div>
+      <div class="big-date" id="ci-date"></div>
+      <p class="ci-note">Your inbox is waiting. Tickets come in one at a time from people around the office. Write the query, run it, send them the results.</p>
+      <a href="/" class="ci-back">← Back to WorkSQL</a>
+    </div>
+    <form class="clockin-card" id="ci-form">
+      <h1 id="ci-title">Monday, 09:00</h1>
+      <p class="ci-lede" id="ci-lede">You’ve got 1 new message.</p>
+      <div id="ci-pick" hidden>
+        <div class="field">Which day?</div>
+        <div class="days" id="ci-days"></div>
+      </div>
+      <button class="btn btn-primary btn-lg" type="submit" style="width:100%">Clock in</button>
+      <p class="ci-small">Free. No sign-up. Progress stays in this browser.</p>
+    </form>
+  </section>
+
+  <!-- ===== The desk ===== -->
+  <section class="desk" id="desk" hidden>
+    <header class="titlebar">
+      <span class="app-ico"></span>
+      <span class="title" id="win-title"></span>
+      <span class="clock" id="clock"></span>
+      <button class="tb-mute" id="mute" type="button">🔔</button>
+      <button class="tb-btn" id="clock-out">Clock out</button>
+    </header>
+
+    <div class="toolbar" role="toolbar">
+      <button class="tool" id="t-new" title="New Query"><span class="ti">＋</span> New Query</button>
+      <span class="sep"></span>
+      <label class="db-pick" title="Available databases"><select disabled><option>Harbour</option></select></label>
+      <button class="tool exec" id="t-exec" title="Execute (F5)"><span class="ti play">▶</span> Execute</button>
+      <button class="tool" id="t-parse" title="Parse (Ctrl+F5)"><span class="ti">✓</span> Parse</button>
+      <span class="sep"></span>
+      <button class="tool" id="t-results" title="Show results pane (Ctrl+R)">▤ Results pane</button>
+      <button class="tool" id="t-tour" title="Show the guided tour again">? Tour</button>
+      <span class="spacer"></span>
+      <span class="kb-hint">F5 execute · Ctrl+F5 parse · Ctrl+R results · select text to run just that</span>
+    </div>
+
+    <div class="panes">
+      <aside class="pane inbox">
+        <div class="pane-head">Inbox <span class="count" id="inbox-count"></span></div>
+        <ul class="mail-list" id="mail-list"></ul>
+        <div class="thread" id="thread"></div>
+        <div class="thread-actions" id="thread-actions"></div>
+      </aside>
+
+      <aside class="pane explorer">
+        <div class="pane-head">Object Explorer</div>
+        <div class="tree" id="tree"></div>
+        <div class="table-info" id="table-info" hidden></div>
+      </aside>
+
+      <main class="workarea">
+        <div class="doc-tabs" id="doc-tabs"></div>
+        <div class="coach" id="coach" hidden></div>
+        <div class="editor ssms-editor" id="editor">
+          <div class="gutter"></div>
+          <div class="code">
+            <pre aria-hidden="true"></pre>
+            <textarea spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Query editor"></textarea>
+          </div>
+        </div>
+        <div class="results-pane" id="results-pane">
+          <div class="res-tabs">
+            <button class="res-tab active" data-tab="grid" id="res-tab-grid">▦ Results</button>
+            <button class="res-tab" data-tab="msg">✉ Messages</button>
+          </div>
+          <div class="res-body" id="res-grid"></div>
+          <div class="res-body msg" id="res-msg" hidden></div>
+          <div class="query-status" id="query-status"></div>
+        </div>
+      </main>
+    </div>
+
+    <footer class="statusbar">
+      <span id="sb-left">Ready</span>
+      <span class="spacer"></span>
+      <span>HARBOUR-SQL01 (16.0)</span>
+      <span id="sb-login"></span>
+      <span>Harbour</span>
+      <span id="sb-time">00:00:00</span>
+      <span id="sb-rows">0 rows</span>
+    </footer>
+  </section>
+
+  <!-- ===== Clock out ===== -->
+  <section class="clockout" id="clockout" hidden>
+    <div class="clockout-card">
+      <h1>Shift over.</h1>
+      <div class="co-stats" id="co-stats"></div>
+      <p id="co-note"></p>
+      <div class="co-nudge" id="co-nudge"></div>
+      <div class="co-actions">
+        <button class="btn btn-ghost" id="co-again">Clock back in</button>
+        <a class="btn btn-primary" href="/lessons">Back to WorkSQL</a>
+      </div>
+    </div>
+  </section>
+
+  <div class="toast" id="toast" hidden></div>
+  <div class="tour-ring" id="tour-ring" hidden></div>
+  <div class="tour-card" id="tour-card" role="dialog" aria-live="polite" hidden></div>
+  <div class="ctx-menu" id="ctx" hidden></div>
+
+  <section class="small-screen">
+    <h1>Work mode needs a bigger screen.</h1>
+    <p>It’s a full query window, inbox and object explorer, like the office. Open it on a laptop or desktop.</p>
+    <a class="btn btn-primary" href="/lessons">Do lessons instead</a>
+  </section>
+
+  <script type="module" src="/js/work.js"></script>
+</body>
+</html>

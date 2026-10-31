@@ -1,0 +1,18 @@
+# Dependencies (none yet, but keep them out if added)
+node_modules/
+
+# Runtime data: nudge sign-ups contain people's email addresses
+data/
+
+# Emails written instead of sent until a provider is wired
+outbox/
+
+# Local editor/assistant settings
+.claude/
+
+# Environment and OS noise
+.env
+.env.*
+.DS_Store
+Thumbs.db
+*.log

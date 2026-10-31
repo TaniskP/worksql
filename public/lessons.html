@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The week’s inbox · WorkSQL</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body class="app">
+  <header class="app-header">
+    <div class="inner">
+      <a href="/" class="logo" data-logo>WorkSQL</a>
+      <div class="crumbs"><span>The week’s inbox</span></div>
+      <div class="right"><span class="last" id="last"></span><span id="streak"></span></div>
+    </div>
+  </header>
+
+  <main class="page">
+    <div class="path-wrap">
+      <div id="paths"></div>
+      <aside>
+        <div class="card side-card work-card">
+          <h3>Work mode</h3>
+          <p style="margin-bottom:14px">Same tickets, no classroom. Clock in at Harbour &amp; Co: an inbox, a query window, and colleagues waiting on results.</p>
+          <a class="btn btn-primary" style="width:100%" href="/work">Clock in</a>
+        </div>
+        <div class="card side-card">
+          <h3>Your streak</h3>
+          <div class="big-stat" id="streak-big"></div>
+          <p id="streak-note"></p>
+        </div>
+        <div class="card side-card">
+          <h3>Progress</h3>
+          <div class="meter"><span id="meter" style="width:0"></span></div>
+          <p id="progress-note"></p>
+          <p class="muted-note">Progress stays in this browser.</p>
+        </div>
+        <div class="card side-card" id="plan-card"></div>
+        <div class="card side-card" id="nudge-card"></div>
+        <p class="dev-note" id="dev"></p>
+      </aside>
+    </div>
+  </main>
+
+  <script type="module">
+    import { icons, store, streakPill, esc, devPlanToggle, nudgeForm, pingNudge } from '/js/common.js';
+    document.querySelector('[data-logo]').insertAdjacentHTML('afterbegin', icons.logo);
+    document.getElementById('streak').innerHTML = streakPill();
+    document.getElementById('last').textContent = store.lastSession() || '';
+
+    const { days, lessons } = await (await fetch('/api/lessons')).json();
+    const { completed } = store.get();
+    const paid = store.isPaid();
+    const current = (lessons.find((l) => !completed[l.id]) || {}).id;
+    const paidLessons = lessons.filter((l) => !l.free);
+    const paidDays = days.length - 1;
+
+    const row = (l) => {
+      const done = !!completed[l.id];
+      const locked = !l.free && !paid;
+      const cls = done ? 'done' : locked ? 'locked' : l.id === current ? 'current' : '';
+      const state = done ? icons.check : locked ? icons.lock : l.id === current ? icons.play : '';
+      return `<li><a class="lesson-row ${cls}" href="${locked ? '/pricing' : '/lesson/' + l.id}">
+        <span class="state">${state}</span><span class="n">${l.n}</span>
+        <span class="topic">${esc(l.topic)}<span class="kind-chip">${esc(l.kind)}</span></span>
+        <span class="blurb">${esc(l.blurb)} <span class="from">· ${esc(l.from)}</span></span>
+        <span class="mins">${locked ? '<span class="paid-chip">Paid</span>' : l.minutes + ' min'}</span><span class="chev">${icons.chev}</span></a></li>`;
+    };
+
+    // A working week: each day is an inbox of about six tickets.
+    document.getElementById('paths').innerHTML = days.map((d) => {
+      const ls = lessons.filter((l) => l.day === d.id);
+      const mins = ls.reduce((a, l) => a + l.minutes, 0);
+      const free = ls.every((l) => l.free);
+      const doneN = ls.filter((l) => completed[l.id]).length;
+      return `<section class="card path-card" id="day-${d.id}">
+        <div class="path-head">
+          <div><div class="path-label">Week ${d.week} · ${free ? 'Free' : paid ? 'Unlocked' : 'Paid'}</div><h1>${esc(d.name)} inbox: ${ls.length} tickets</h1></div>
+          <span class="path-count">${doneN} / ${ls.length}</span>
+        </div>
+        <div class="sub"><strong>${esc(d.title)}.</strong> ${esc(d.blurb)} About ${Math.round(mins / 5) * 5} minutes.</div>
+        <ul class="lesson-list">${ls.map(row).join('')}</ul>
+        ${free && !paid ? `<div class="wall">
+          <div><strong>Free ends with Monday.</strong> Then ${paidDays} more working days, about six tickets each: ${paidLessons.length} tickets, a month of five-minute days.</div>
+          <a class="btn btn-primary" href="/pricing">See plans</a></div>` : ''}
+      </section>`;
+    }).join('');
+
+    const n = lessons.filter((l) => completed[l.id]).length;
+    const streak = store.streak();
+    document.getElementById('streak-big').innerHTML = `${icons.flame} ${streak} day${streak === 1 ? '' : 's'}`;
+    document.getElementById('streak-note').textContent = streak ? 'Finish a ticket today to keep it going.' : 'Finish one ticket today to start a streak.';
+    document.getElementById('meter').style.width = `${(n / lessons.length) * 100}%`;
+    document.getElementById('progress-note').textContent = `${n} of ${lessons.length} tickets done.`;
+    document.getElementById('plan-card').innerHTML = paid
+      ? `<h3>Paid plan</h3><p>The whole week is unlocked: ${lessons.length} tickets.</p>`
+      : `<h3>Free plan</h3><p style="margin-bottom:14px">Monday is free. ${paidDays} more days, ${paidLessons.length} tickets, from about £6.60 a month.</p><a class="btn btn-primary" style="width:100%" href="/pricing">See plans</a>`;
+    devPlanToggle(document.getElementById('dev'));
+    nudgeForm(document.getElementById('nudge-card'));
+    pingNudge();
+    if (location.hash) document.querySelector(location.hash)?.scrollIntoView();
+  </script>
+</body>
+</html>

@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lesson · WorkSQL</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body class="app">
+  <header class="app-header">
+    <div class="inner">
+      <a href="/" class="logo" data-logo>WorkSQL</a>
+      <div class="crumbs">
+        <a href="/lessons" class="hide-sm" id="crumb-path">Lessons</a><span class="sep hide-sm">›</span>
+        <a href="/lessons" id="crumb-n">Lesson</a><span class="sep">›</span>
+        <span id="crumb-topic"></span>
+      </div>
+      <div class="right"><span id="streak"></span><span class="last" id="last"></span></div>
+    </div>
+  </header>
+
+  <main class="page">
+    <div class="lesson-top">
+      <section class="card task">
+        <div class="task-meta"><span id="date"></span><span class="kind" id="kind"></span></div>
+        <div class="sender">
+          <span class="avatar" id="avatar"></span>
+          <div><strong id="from-name"></strong> <span id="from-role"></span></div>
+          <span class="time" id="time"></span>
+        </div>
+        <h1 id="title"></h1>
+        <ul id="bullets"></ul>
+        <ol class="steps-list" id="steps" hidden></ol>
+        <div class="tip" id="tip"></div>
+      </section>
+      <section class="card tables">
+        <div class="head">Tables <span>(Harbour &amp; Co)</span></div>
+        <div class="tabs" id="tabs"></div>
+        <div class="grid-wrap" id="preview"></div>
+      </section>
+    </div>
+
+    <div id="work">
+      <section class="card editor-card">
+        <div class="editor">
+          <div class="gutter" id="gutter"></div>
+          <div class="code">
+            <pre id="hl" aria-hidden="true"></pre>
+            <textarea id="sql" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Your T-SQL query"></textarea>
+            <span class="ghost">-- Write the query, then Ctrl+Enter to run</span>
+          </div>
+        </div>
+      </section>
+
+      <div class="runbar">
+        <button class="btn btn-primary" id="run"><span data-icon="play"></span> Run query</button>
+        <button class="btn btn-text" id="reset">Reset</button>
+        <span class="hint-k"><span class="kbd">Ctrl + Enter</span> to run · Progress stays in this browser</span>
+      </div>
+
+      <section class="card results">
+        <div class="results-head">
+          <button class="rtab active" data-tab="results" id="rtab-results">Results</button>
+          <button class="rtab" data-tab="messages">Messages</button>
+          <span class="status" id="status"></span>
+        </div>
+        <div class="results-body" id="results"><div class="empty">Run your query to see results here.</div></div>
+        <div class="results-body" id="messages" hidden><div class="messages">No messages yet.</div></div>
+      </section>
+
+      <div id="verdict"></div>
+    </div>
+  </main>
+
+  <script type="module" src="/js/lesson.js"></script>
+</body>
+</html>
