@@ -615,3 +615,7 @@ table.grid td.num, table.grid th.num { text-align: left; }
   .demo-cursor { transition: none; }
   .demo .d-app *, .demo .d-app { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+/* Back from Stripe Checkout */
+.welcome-card { padding: 22px 24px; margin-bottom: 20px; border-color: #c9efd6; background: var(--green-50); }
+.welcome-card h2 { font-size: 22px; margin-bottom: 6px; }
+.welcome-card p { color: var(--ink-2); margin: 0 0 14px; }

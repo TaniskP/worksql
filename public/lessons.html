@@ -45,7 +45,7 @@
   </main>
 
   <script type="module">
-    import { icons, store, streakPill, esc, devPlanToggle, nudgeForm, pingNudge } from '/js/common.js';
+    import { icons, store, streakPill, esc, devPlanToggle, nudgeForm, pingNudge, accountCard } from '/js/common.js';
     document.querySelector('[data-logo]').insertAdjacentHTML('afterbegin', icons.logo);
     document.getElementById('streak').innerHTML = streakPill();
     document.getElementById('last').textContent = store.lastSession() || '';
@@ -94,9 +94,16 @@
     document.getElementById('streak-note').textContent = streak ? 'Finish a ticket today to keep it going.' : 'Finish one ticket today to start a streak.';
     document.getElementById('meter').style.width = `${(n / lessons.length) * 100}%`;
     document.getElementById('progress-note').textContent = `${n} of ${lessons.length} tickets done.`;
-    document.getElementById('plan-card').innerHTML = paid
-      ? `<h3>Paid plan</h3><p>The whole week is unlocked: ${lessons.length} tickets.</p>`
-      : `<h3>Free plan</h3><p style="margin-bottom:14px">Monday is free. ${paidDays} more days, ${paidLessons.length} tickets, from about £6.60 a month.</p><a class="btn btn-primary" style="width:100%" href="/pricing">See plans</a>`;
+    accountCard(document.getElementById('plan-card'), {
+      freeHtml: `<h3>Free plan</h3><p style="margin-bottom:14px">Monday is free. ${paidDays} more days, ${paidLessons.length} tickets, from about £6.60 a month.</p><a class="btn btn-primary" style="width:100%" href="/pricing">See plans</a>`,
+    });
+    // Just back from Stripe Checkout.
+    if (new URLSearchParams(location.search).get('welcome') && paid) {
+      document.getElementById('paths').insertAdjacentHTML('afterbegin', `<div class="card welcome-card"><h2>You’re in.</h2>
+        <p>Every day of the week is unlocked on this browser. Tuesday’s inbox is waiting.</p>
+        <a class="btn btn-primary" href="/work">Clock in</a></div>`);
+      history.replaceState(null, '', '/lessons');
+    }
     devPlanToggle(document.getElementById('dev'));
     nudgeForm(document.getElementById('nudge-card'));
     pingNudge();

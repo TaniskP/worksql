@@ -1,4 +1,4 @@
-// WorkSQL server: static pages + the query sandbox + payment placeholders. No dependencies.
+// WorkSQL server: static pages, the query sandbox, Stripe checkout-as-login. No dependencies.
 const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -10,6 +10,9 @@ const site = require('./src/site');
 const { plans } = require('./src/plans');
 const payments = require('./src/payments');
 const nudges = require('./src/nudges');
+const session = require('./src/session');
+const members = require('./src/members');
+const { canRun, devUnlockAllowed, DEV_EMAIL } = require('./src/access');
 const { articles, renderArticle, renderIndex } = require('./src/articles');
 
 const PORT = Number(process.env.PORT) || 3000;
@@ -33,6 +36,18 @@ function readJson(req) {
     req.on('end', () => { try { resolve(data ? JSON.parse(data) : {}); } catch (e) { reject(e); } });
   });
 }
+
+// Webhooks need the exact bytes Stripe sent to check the signature, so no JSON parsing here.
+function readRaw(req) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let size = 0;
+    req.on('data', (c) => { size += c.length; if (size > 1_000_000) { reject(new Error('Too large')); req.destroy(); } else chunks.push(c); });
+    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+  });
+}
+
+const isHttps = (req) => (process.env.SITE_URL || '').startsWith('https://') || req.headers['x-forwarded-proto'] === 'https';
 
 function serveFile(res, file) {
   const full = path.join(PUBLIC, file);
@@ -68,7 +83,8 @@ async function api(req, res, url) {
     const { lessonId, step, sql } = await readJson(req);
     const lesson = lessons.find((l) => l.id === +lessonId);
     if (!lesson) return send(res, 404, { error: 'No such lesson.' });
-    // TODO(payments): once accounts exist, refuse paid (non-free) lessons for unpaid users here.
+    // Paid tickets need a paid member's cookie. Checked here on the server, not just hidden in the page.
+    if (!canRun(lesson, session.whoIs(req))) return send(res, 402, { error: 'paid_only', message: 'This ticket is on the paid plan.' });
     return send(res, 200, await grade(lesson, step, sql));
   }
 
@@ -98,15 +114,47 @@ async function api(req, res, url) {
     return send(res, 200, { plans: visible, paymentsLive: payments.live() });
   }
 
+  // ---------- payments and the login cookie ----------
+  if (req.method === 'GET' && p === '/api/me') {
+    const who = session.whoIs(req);
+    return send(res, 200, {
+      email: who.email, paid: who.paid, plan: who.plan,
+      canManage: Boolean(who.member && who.member.customerId), paymentsLive: payments.live(), devUnlock: devUnlockAllowed(req),
+    });
+  }
+
   if (req.method === 'POST' && p === '/api/checkout') {
-    const { plan, seats } = await readJson(req);
-    const out = await payments.createCheckout({ planId: plan, seats: Number(seats) || undefined });
+    const { plan } = await readJson(req);
+    const out = await payments.createCheckout({ planId: plan, origin: originOf(req), email: session.whoIs(req).email });
     return send(res, out.status, out.body);
   }
 
   if (req.method === 'POST' && p === '/api/webhooks/payments') {
-    const out = await payments.handleWebhook(req);
+    const out = await payments.handleWebhook(await readRaw(req), req.headers['stripe-signature']);
     return send(res, out.status, out.body);
+  }
+
+  if (req.method === 'POST' && p === '/api/portal') {
+    const url = await payments.portal(session.whoIs(req).member, originOf(req));
+    return url ? send(res, 200, { url }) : send(res, 400, { error: 'No subscription to manage on this browser.' });
+  }
+
+  if (req.method === 'POST' && p === '/api/signout') {
+    res.setHeader('Set-Cookie', session.clearCookieHeader());
+    return send(res, 200, { ok: true });
+  }
+
+  // Local development: flip this browser between paid and free without going through Stripe.
+  if (req.method === 'POST' && p === '/api/dev/plan') {
+    if (!devUnlockAllowed(req)) return send(res, 403, { error: 'Not available.' });
+    const { paid } = await readJson(req);
+    if (paid) {
+      members.upsert({ email: DEV_EMAIL, plan: 'yearly', status: 'active' });
+      res.setHeader('Set-Cookie', session.setCookieHeader(DEV_EMAIL, { secure: false }));
+    } else {
+      res.setHeader('Set-Cookie', session.clearCookieHeader());
+    }
+    return send(res, 200, { ok: true });
   }
 
   // ---------- reference pages and nudges ----------
@@ -157,6 +205,7 @@ function seoRoutes(req, res, url) {
     res.end(`User-agent: *\nDisallow: /api/\nSitemap: ${originOf(req)}/sitemap.xml\n`);
     return true;
   }
+  if (p === '/welcome') return true; // handled asynchronously in the request handler
   if (p === '/unsubscribe') {
     const ok = nudges.unsubscribe(url.searchParams.get('t') || '');
     sendHtml(res, 200, `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Unsubscribed · WorkSQL</title>
@@ -167,10 +216,25 @@ function seoRoutes(req, res, url) {
   return false;
 }
 
+// Back from Stripe Checkout. Confirm the session with Stripe, save the member, set the login cookie.
+async function welcome(req, res, url) {
+  let member = null;
+  try { member = await payments.completeCheckout(url.searchParams.get('session_id')); } catch (e) { console.error('[welcome]', e.message); }
+  if (member) {
+    res.writeHead(303, { Location: '/lessons?welcome=1', 'Set-Cookie': session.setCookieHeader(member.email, { secure: isHttps(req) }) });
+    return res.end();
+  }
+  return sendHtml(res, 200, `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Payment · WorkSQL</title>
+    <link rel="stylesheet" href="/css/app.css"><main class="article"><h1>We couldn't confirm that payment yet.</h1>
+    <p>If you've just paid, give it a few seconds and try again. If you didn't finish checking out, nothing was charged.</p>
+    <p><a class="btn btn-primary" href="/welcome?session_id=${encodeURIComponent(url.searchParams.get('session_id') || '')}">Try again</a> <a class="btn btn-ghost" href="/pricing">Back to pricing</a></p></main>`);
+}
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   try {
     if (url.pathname.startsWith('/api/')) return await api(req, res, url);
+    if (url.pathname === '/welcome') return await welcome(req, res, url);
     if (seoRoutes(req, res, url)) return;
     if (PAGES[url.pathname]) return serveFile(res, PAGES[url.pathname]);
     if (/^\/lesson\/\d+\/?$/.test(url.pathname)) return serveFile(res, 'lesson.html');

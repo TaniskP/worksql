@@ -53,8 +53,8 @@ export const store = {
     save(s);
   },
   setDraft(id, sql) { const s = this.get(); s.drafts[id] = sql; save(s); },
-  setPlan(plan) { const s = this.get(); s.plan = plan; save(s); },
-  isPaid() { return this.get().plan !== 'free'; },
+  // Paid comes from the server (the Stripe login cookie), never from this browser's storage.
+  isPaid() { return Boolean(me.paid); },
   streak() {
     const days = new Set(this.get().days);
     const d = new Date();
@@ -76,6 +76,10 @@ export const store = {
   },
   completedIds() { return Object.keys(this.get().completed).map(Number); },
 };
+
+// ---------- who is this? ----------
+// One call per page. The cookie that answers it is HttpOnly, so only the server can read it.
+export const me = await fetch('/api/me').then((r) => r.json()).catch(() => ({ paid: false }));
 
 // ---------- helpers ----------
 export function esc(s) {
@@ -113,7 +117,7 @@ async function startCheckout(planId, button) {
 }
 
 export function renderPlans(container, plans, paymentsLive) {
-  const paid = store.get().plan;
+  const paid = me.paid ? me.plan || 'paid' : 'free';
   container.style.setProperty('--cols', plans.length);
   container.innerHTML = plans.map((p) => {
     const per = p.interval ? `<small> / ${p.interval}</small>` : '';
@@ -135,12 +139,33 @@ export function renderPlans(container, plans, paymentsLive) {
   container.querySelectorAll('[data-plan]').forEach((b) => b.addEventListener('click', () => startCheckout(b.dataset.plan, b)));
 }
 
-// Local development only: flip the stored plan to test paid lessons without a payment provider.
+// Local development only: make this browser a paid member (or not) without going through Stripe.
+// The server only allows it from this machine and never in production.
 export function devPlanToggle(el) {
-  if (!['localhost', '127.0.0.1'].includes(location.hostname) || !el) return;
-  const paid = store.isPaid();
-  el.innerHTML = `Dev only: <button class="btn-text" type="button">${paid ? 'switch back to the free plan' : 'unlock paid lessons in this browser'}</button>`;
-  el.querySelector('button').addEventListener('click', () => { store.setPlan(paid ? 'free' : 'yearly'); location.reload(); });
+  if (!me.devUnlock || !el) return;
+  el.innerHTML = `Dev only: <button class="btn-text" type="button">${me.paid ? 'switch back to the free plan' : 'unlock paid lessons in this browser'}</button>`;
+  el.querySelector('button').addEventListener('click', async () => {
+    await fetch('/api/dev/plan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ paid: !me.paid }) });
+    location.reload();
+  });
+}
+
+// The "account" card: who's paid on this browser, Stripe's billing page, and signing out.
+export function accountCard(el, { freeHtml }) {
+  if (!el) return;
+  if (!me.paid) { el.innerHTML = freeHtml; return; }
+  el.innerHTML = `<h3>Paid plan</h3><p style="margin-bottom:12px">Signed in as <b>${esc(me.email)}</b> on this browser. Every day is unlocked.</p>
+    ${me.canManage ? '<button class="btn btn-ghost" style="width:100%" data-portal>Manage subscription</button>' : ''}
+    <button class="btn-text" style="padding:8px 0 0" data-signout>Sign out of this browser</button>`;
+  el.querySelector('[data-portal]')?.addEventListener('click', async (e) => {
+    e.target.disabled = true;
+    const r = await fetch('/api/portal', { method: 'POST' }).then((x) => x.json());
+    if (r.url) location.href = r.url; else { e.target.disabled = false; e.target.insertAdjacentHTML('afterend', `<p class="plan-error">${esc(r.error || 'Try again.')}</p>`); }
+  });
+  el.querySelector('[data-signout]').addEventListener('click', async () => {
+    await fetch('/api/signout', { method: 'POST' });
+    location.reload();
+  });
 }
 // ---------- "still waiting" nudges ----------
 

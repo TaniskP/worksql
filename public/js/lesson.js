@@ -197,6 +197,10 @@ async function run() {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lessonId: lesson.id, step, sql: ta.value }),
     });
     const data = await r.json();
+    if (r.status === 402) {
+      renderVerdict({ pass: false, headline: 'This ticket is on the paid plan.', detail: 'There’s no active subscription on this browser. See plans to unlock it.' });
+      return;
+    }
     const stamp = new Date().toISOString().replace('Z', '0000+00:00');
     if (data.error) {
       $('rtab-results').textContent = 'Results';

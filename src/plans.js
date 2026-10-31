@@ -18,8 +18,8 @@ const plans = [
     summary: 'The whole working week: 36 more tickets',
     features: ['Six more days of tickets, about six a day', 'Walkthrough first, then reps, for every new idea', 'Cancel any time'],
     cta: 'Go monthly',
-    // TODO(payments): set to the provider's price ID, e.g. Stripe "price_..."
-    providerPriceId: null,
+    // Stripe price ID ("price_..."), from the Stripe dashboard. Kept in the environment so test and live keys can differ.
+    providerPriceId: process.env.STRIPE_PRICE_MONTHLY || null,
   },
   {
     id: 'yearly',
@@ -30,7 +30,7 @@ const plans = [
     features: ['Everything in Monthly', 'Two months free vs paying monthly', 'New weeks of tickets included as they land'],
     cta: 'Go yearly',
     recommended: true,
-    providerPriceId: null,
+    providerPriceId: process.env.STRIPE_PRICE_YEARLY || null,
   },
   {
     // Hidden until the manager view exists.

@@ -53,9 +53,41 @@ and the sloppy queries that must fail.
 - Homepage demo (`public/js/demo.js`): nine animated scenes, one ticket from inbox to reply, running the real queries.
   Synthesised sounds are off until the visitor turns them on. Editors have column suggestions (Ctrl+Space, or `alias.`).
 
+## Payments: checkout is the login
+
+No passwords, no magic links, no accounts product:
+
+1. They pay on Stripe Checkout, which collects their email (`POST /api/checkout`).
+2. Stripe calls the webhook (`POST /api/webhooks/payments`); the signed event saves that email as a paid member in
+   `data/members.json`. Later subscription events keep it current, so a cancelled or failed subscription locks again.
+3. Stripe sends them back to `/welcome?session_id=...`; the server confirms the session with Stripe (it never trusts the
+   URL alone) and sets a signed, HttpOnly cookie.
+4. That cookie unlocks Tuesday onwards. `/api/run` refuses paid tickets with a 402 without it, so it's enforced on the
+   server, not just hidden in the page. Paid members get a Manage subscription button (Stripe's billing portal) and Sign out.
+
+Code: `src/payments.js` (the flow), `src/stripe.js` (REST calls and webhook signature checks, no SDK),
+`src/members.js`, `src/session.js` (the cookie), `src/access.js` (who can run what).
+
+### Set it up
+
+1. Copy `.env.example` to `.env` and fill it in. `npm start` reads it.
+2. In Stripe (test mode first): create a product with a monthly £9.99 and a yearly £79 recurring price; put their
+   `price_...` IDs in `STRIPE_PRICE_MONTHLY` and `STRIPE_PRICE_YEARLY`, and the secret key in `STRIPE_SECRET_KEY`.
+3. Webhook: locally, run `stripe listen --forward-to localhost:3000/api/webhooks/payments` and use the `whsec_...` it prints.
+   In production, add an endpoint for `https://your-site/api/webhooks/payments` with the events
+   `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `customer.subscription.updated` and
+   `customer.subscription.deleted`.
+4. Turn on the customer portal in Stripe (Settings > Billing > Customer portal) for the Manage subscription button.
+5. Production: set `COOKIE_SECRET`, `SITE_URL` (https) and `NODE_ENV=production`. The pay buttons appear once the key and
+   both price IDs are set; until then pricing says "Not on sale yet".
+
+Test card: `4242 4242 4242 4242`, any future date, any CVC.
+
 ## Not done yet
 
-- Email: no provider wired, so nudges land in `outbox/`. The founder quote on the homepage is signed "The founder of WorkSQL"; put your name on it.
-- Payments: pay buttons only appear once `payments.live()` is true (Stripe key + price IDs). Until then pricing says "Not on sale yet".
-- Accounts: progress, streak and plan live in localStorage. The paywall is client-side only.
-- On localhost, the lessons page has a dev-only "unlock paid lessons" toggle for testing.
+- Email: no provider wired, so nudges land in `outbox/`.
+- Access is per browser. Someone who paid and opens a new browser has no cookie there yet; restoring access on another
+  device (for example by emailing a sign-in link) isn't built.
+- Progress and streaks still live in the browser's localStorage, not on the server.
+- Members are kept in a JSON file, which is fine for one server; move to a database before running more than one.
+- On localhost (not in production), the lessons page has a dev-only toggle that makes the browser a paid member without Stripe.

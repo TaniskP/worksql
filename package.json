@@ -8,7 +8,7 @@
     "node": ">=22.13"
   },
   "scripts": {
-    "start": "node --disable-warning=ExperimentalWarning server.js",
-    "test": "node --disable-warning=ExperimentalWarning test/lessons.test.js && node --disable-warning=ExperimentalWarning test/nudges.test.js"
+    "start": "node --env-file-if-exists=.env --disable-warning=ExperimentalWarning server.js",
+    "test": "node --disable-warning=ExperimentalWarning test/lessons.test.js && node --disable-warning=ExperimentalWarning test/nudges.test.js && node --disable-warning=ExperimentalWarning test/payments.test.js"
   }
 }

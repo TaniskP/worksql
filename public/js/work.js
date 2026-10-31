@@ -369,9 +369,11 @@ function briefOf(l) {
 // ================= walkthrough steps =================
 let sending = false;
 async function grade(l, step, sql) {
-  return fetch('/api/run', {
+  const r = await fetch('/api/run', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lessonId: l.id, step, sql }),
-  }).then((x) => x.json());
+  });
+  if (r.status === 402) return { verdict: { pass: false, headline: 'This ticket is on the paid plan.', detail: 'There’s no active subscription on this browser.' } };
+  return r.json();
 }
 
 async function checkStep(l) {
