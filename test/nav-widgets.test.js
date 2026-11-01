@@ -4,9 +4,9 @@ const path = require('node:path');
 const { tools, renderTools, renderTool } = require('../src/tools');
 const { matchHub, hubPaths, excel, pandas, dialects, interview } = require('../src/hubs');
 const { renderGuides } = require('../src/articles');
-const { items } = require('../src/nav');
+const { items, resources } = require('../src/nav');
 
-const navNeedles = ['>Guides<', '>Free tools<', '>Convert<', '>Interview<'];
+const navNeedles = ['>Guided lessons<', '>Resources<', '>Pricing<', '>Guides<', '>Free tools<', '>Convert<', '>Interview<'];
 function hasNav(html, where) {
   for (const n of navNeedles) assert.ok(html.includes(n), `${where} missing ${n}`);
   assert.ok(html.includes('class="nav-more"'), `${where} missing mobile menu`);
@@ -27,7 +27,8 @@ assert.ok(convertHtml.includes('data-search=') && convertHtml.includes('id="q"')
 assert.ok(matchHub('/interview', 'https://worksql.com').includes('id="q"'), '/interview catalog search');
 assert.ok(matchHub('/pandas-to-sql', 'https://worksql.com').includes('id="q"'), '/pandas catalog search');
 hasNav(matchHub('/excel-to-sql/vlookup', 'https://worksql.com'), '/excel-to-sql/vlookup');
-assert.strictEqual(items.length, 6);
+assert.strictEqual(items.length, 2);
+assert.strictEqual(resources.length, 5);
 
 const gates = (file) => {
   const src = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', file), 'utf8');

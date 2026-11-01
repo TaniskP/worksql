@@ -1,4 +1,5 @@
-// The homepage demo: one ticket, start to finish, played out in nine short scenes.
+// The homepage demo: one ticket, start to finish, played out in nine short scenes
+// grouped into four chapters (request, query, feedback, reply).
 // It runs real queries against Harbour & Co, so the rows and the "6 rows, should be 5" mistake are genuine.
 import { icons, esc } from '/js/common.js';
 import { highlight } from '/js/editor.js';
@@ -111,7 +112,7 @@ async function wait(ms) {
 const LOCK = '<svg viewBox="0 0 24 24" width="13" height="13"><rect x="5" y="11" width="14" height="9" rx="2" fill="currentColor"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2.4"/></svg>';
 const TICK = '<svg viewBox="0 0 24 24" width="14" height="14"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const MAIL = [
-  { k: 'james', from: 'James Rowe', ini: 'JR', color: '#7c3aed', subj: 'Last week’s orders over £50', prev: 'Need this for the 10am. Don’t include today.', time: '09:14' },
+  { k: 'james', from: 'Harvey Rowe', ini: 'HR', color: '#7c3aed', subj: 'Last week’s orders over £50', prev: 'Need this for the 10am. Don’t include today.', time: '09:14' },
   { k: 'amy', from: 'Amy Nair', subj: 'Monthly revenue by product', prev: 'Can you pull this for last month?', time: '10:32', lock: true },
   { k: 'becky', from: 'Becky Ashworth', subj: 'Customers with no orders', prev: 'I need a list of customers who have never ordered.', time: '11:20', lock: true },
   { k: 'tom', from: 'Tom Gallagher', subj: 'Cancelled vs shipped', prev: 'Show me the cancelled orders this month.', time: '12:05', lock: true },
@@ -250,11 +251,11 @@ const scenes = [
     title: 'Open the email - read the task', short: 'Email',
     setup() {
       mount(mailShell(`<article class="d-email">
-        <header><span class="d-av" style="background:#7c3aed">JR</span><div><b>James Rowe</b><span>Sales Manager · To: Me</span></div><time>09:14</time></header>
+        <header><span class="d-av" style="background:#7c3aed">HR</span><div><b>Harvey Rowe</b><span>Sales Manager · To: Me</span></div><time>09:14</time></header>
         <div class="d-mailbody">
           <p class="fade">Hi,</p>
           <p class="fade">Need last week’s orders over £50 for the 10am.<br>Don’t include today. Show order date, customer name and total amount.</p>
-          <p class="fade">Thanks,<br>James</p>
+          <p class="fade">Thanks,<br>Harvey</p>
         </div>
         <div class="d-means"><b>What this means</b><ul>
           <li>Only orders from the last 7 days, not including today</li>
@@ -373,7 +374,7 @@ ${WRONG_WHERE}${ORDER}`, text, { speed: 18 });
       $s('.d-results').classList.add('good');
       await wait(700 + rightRows.length * 90);
       sfx.success();
-      tip(`<div class="d-mark good"><span class="d-okic">${TICK}</span><b>${rightRows.length} rows. Matches.</b>2:14 on this one. Time to reply to James.</div>`);
+      tip(`<div class="d-mark good"><span class="d-okic">${TICK}</span><b>${rightRows.length} rows. Matches.</b>2:14 on this one. Time to reply to Harvey.</div>`);
       $s('.d-tip').classList.add('mark');
       await wait(2800);
     },
@@ -383,18 +384,18 @@ ${WRONG_WHERE}${ORDER}`, text, { speed: 18 });
     setup() {
       mount(mailShell(`<article class="d-compose">
         <h4>RE: Last week’s orders over £50</h4>
-        <div class="d-to">To: <span class="chip">James Rowe</span></div>
+        <div class="d-to">To: <span class="chip">Harvey Rowe</span></div>
         <div class="d-toolbar2"><b>B</b><i>I</i><u>U</u><span>🔗</span><span>📎</span></div>
         <div class="d-reply"><span class="d-replytext"></span><span class="d-caret"></span></div>
         <div class="d-attach">📎 Results · <b class="d-attn">${rightRows.length} rows</b> · last_week_orders.xlsx</div>
-        <blockquote>On Monday, James Rowe wrote:<br>Need last week’s orders over £50 for the 10am. Don’t include today.</blockquote>
+        <blockquote>On Monday, Harvey Rowe wrote:<br>Need last week’s orders over £50 for the 10am. Don’t include today.</blockquote>
         <div class="d-sendrow"><button class="d-send" data-k="send">➤ Send</button></div>
       </article>`));
     },
     async play() {
       await wait(500);
       const el = $s('.d-replytext');
-      const msg = `Hi James,\n\nHere are last week’s orders over £50, not including today: ${rightRows.length} orders, newest first.\n\nThanks,\nSam`;
+      const msg = `Hi Harvey,\n\nHere are last week’s orders over £50, not including today: ${rightRows.length} orders, newest first.\n\nThanks,\nSam`;
       let out = '';
       for (const ch of msg) {
         out += ch;
@@ -426,7 +427,7 @@ ${WRONG_WHERE}${ORDER}`, text, { speed: 18 });
       item.querySelector('.d-time').textContent = '09:32';
       sfx.ping();
       await wait(600);
-      $s('.d-pane').insertAdjacentHTML('beforeend', '<div class="d-toast">✓ Ticket closed · Sent to James</div>');
+      $s('.d-pane').insertAdjacentHTML('beforeend', '<div class="d-toast">✓ Ticket closed · Sent to Harvey</div>');
       sfx.success();
       await wait(2600);
     },
@@ -441,7 +442,7 @@ ${WRONG_WHERE}${ORDER}`, text, { speed: 18 });
         <span class="d-lockbig">${LOCK}</span>
         <h4>Want to solve more of these?</h4>
         <p>Amy, Becky and Tom are waiting. A working week of tickets, about six a day.</p>
-        <a class="btn btn-primary" href="/work">Clock in free</a>
+        <a class="btn btn-primary" href="/work?go=1">Clock in free</a>
         <a class="d-plans" href="/pricing">See plans · £9.99 a month, cancel when you like</a>
       </aside></div>`));
     },
@@ -455,17 +456,33 @@ ${WRONG_WHERE}${ORDER}`, text, { speed: 18 });
   },
 ];
 
+const CHAPTERS = [
+  { title: 'The request', start: 0 },
+  { title: 'Your query', start: 2 },
+  { title: 'Feedback', start: 4 },
+  { title: 'The reply', start: 6 },
+];
+
+function chapterOf(i) {
+  let c = 0;
+  for (let n = CHAPTERS.length - 1; n >= 0; n--) {
+    if (i >= CHAPTERS[n].start) { c = n; break; }
+  }
+  return c;
+}
+
 // ================= player =================
 let current = 0;
 let started = false;
 let done = false;
 
 function chapterUI() {
+  const chap = chapterOf(current);
   root.querySelectorAll('.demo-chap').forEach((b, i) => {
-    b.classList.toggle('on', i === current);
-    b.classList.toggle('seen', i < current || done);
+    b.classList.toggle('on', i === chap);
+    b.classList.toggle('seen', i < chap || done);
   });
-  root.querySelector('.demo-num').textContent = `${current + 1}.`;
+  root.querySelector('.demo-num').textContent = `${chap + 1}.`;
   root.querySelector('.demo-title').textContent = scenes[current].title;
 }
 
@@ -519,7 +536,7 @@ async function init() {
       <div class="demo-cursor" hidden><svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 2l15 11-7 1.2L8.6 21z" fill="#0b1733" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg></div>
     </div></div>
     <div class="demo-controls">
-      <div class="demo-chaps">${scenes.map((s, i) => `<button class="demo-chap" data-i="${i}" title="${esc(s.title)}"><span>${i + 1}</span><em>${esc(s.short)}</em></button>`).join('')}</div>
+      <div class="demo-chaps">${CHAPTERS.map((c, i) => `<button class="demo-chap" data-i="${c.start}" title="${esc(c.title)}"><span>${i + 1}</span><em>${esc(c.title)}</em></button>`).join('')}</div>
       <div class="demo-buttons">
         <button data-act="play">❚❚ Pause</button>
         <button data-act="sound" aria-pressed="${soundOn}">${soundOn ? '🔊 Sound on' : '🔈 Sound off'}</button>

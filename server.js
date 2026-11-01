@@ -26,7 +26,10 @@ const TYPES = {
   '.png': 'image/png', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.json': 'application/json',
 };
 const TABLES = ['Orders', 'OrderLines', 'Products', 'Customers', 'Staff', 'Returns'];
-const PAGES = { '/': 'index.html', '/lessons': 'lessons.html', '/pricing': 'pricing.html', '/work': 'work.html' };
+const PAGES = {
+  '/': 'index.html', '/lessons': 'lessons.html', '/pricing': 'pricing.html', '/work': 'work.html',
+  '/support': 'support.html', '/privacy': 'privacy.html', '/terms': 'terms.html',
+};
 
 function send(res, status, body) {
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });

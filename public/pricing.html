@@ -12,39 +12,50 @@
   <header class="site-header" style="border-bottom:1px solid var(--line)">
     <nav class="nav">
       <a href="/" class="logo" data-logo>WorkSQL</a>
-      <div class="nav-links">
-        <a href="/guides">Guides</a>
-        <a href="/tools">Free tools</a>
-        <a href="/convert">Convert</a>
-        <a href="/interview">Interview</a>
-        <a href="/lessons">Lessons</a>
-        <a href="/pricing" aria-current="page">Pricing</a>
-      </div>
-      <details class="nav-more">
-        <summary>Menu</summary>
-        <div class="nav-more-list">
-          <a href="/guides">Guides</a>
-          <a href="/tools">Free tools</a>
-          <a href="/convert">Convert</a>
-          <a href="/interview">Interview</a>
-          <a href="/lessons">Lessons</a>
-          <a href="/pricing">Pricing</a>
+        <div class="nav-links">
+          <a href="/lessons">Guided lessons</a>
+          <details class="nav-res">
+            <summary>Resources</summary>
+            <div class="nav-res-list">
+              <form class="nav-res-find" action="/guides" method="get" role="search">
+                <label class="visually-hidden" for="nav-q">Search tools and guides</label>
+                <input id="nav-q" name="q" type="search" placeholder="Search tools and guides…" autocomplete="off">
+              </form>
+              <a href="/guides">Guides</a>
+              <a href="/tsql">T-SQL reference</a>
+              <a href="/tools">Free tools</a>
+              <a href="/convert">Convert</a>
+              <a href="/interview">Interview</a>
+            </div>
+          </details>
+          <a href="/pricing" aria-current="page">Pricing</a>
         </div>
-      </details>
-      <div class="nav-actions">
-        <a href="/lessons" class="btn btn-primary">Start free</a>
-      </div>
+        <details class="nav-more">
+          <summary>Menu</summary>
+          <div class="nav-more-list">
+            <a href="/lessons">Guided lessons</a>
+            <a href="/guides">Guides</a>
+            <a href="/tsql">T-SQL reference</a>
+            <a href="/tools">Free tools</a>
+            <a href="/convert">Convert</a>
+            <a href="/interview">Interview</a>
+            <a href="/pricing">Pricing</a>
+          </div>
+        </details>
+        <div class="nav-actions">
+          <a href="/lessons" class="btn btn-primary">Guided lessons</a>
+        </div>
     </nav>
   </header>
 
   <section class="section">
     <div class="section-head">
       <div class="eyebrow">Pricing</div>
-      <h2>Monday is free. The rest of the week isn’t.</h2>
-      <p>Monday teaches five habits step by step. Paid is the rest of the working week: six more inboxes of about six tickets, a walkthrough the first time you meet each new idea, then reps. A month of five-minute days.</p>
+      <h2>10 free tickets. The rest of the week when you’re ready.</h2>
+      <p>46 workplace tickets across 7 simulated workdays. Start with 10 free tickets and work through the rest at your own pace.</p>
     </div>
     <div class="plans" id="plans"></div>
-    <p class="pricing-note">Prices in GBP. Yearly works out at about £6.60 a month.</p>
+    <p class="pricing-note">Prices in GBP. £79/year is equivalent to £6.58/month. Save 34% compared with monthly billing.</p>
     <div class="card" id="already-paid" style="max-width:480px;margin:28px auto 0;padding:22px 24px"></div>
   </section>
 
@@ -74,7 +85,7 @@
     <div class="inner">
       <a href="/" class="logo" data-logo style="font-size:16px">WorkSQL</a>
       <span>SQL Server, five minutes.</span>
-      <div class="links"><a href="/guides">Guides</a><a href="/tools">Free tools</a><a href="/convert">Convert</a><a href="/interview">Interview</a><a href="/lessons">Lessons</a><a href="/pricing">Pricing</a></div>
+      <div class="links"><a href="/work">Workplace practice</a><a href="/lessons">Guided lessons</a><a href="/guides">Guides</a><a href="/tsql">T-SQL reference</a><a href="/pricing">Pricing</a><a href="/support">Support</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></div>
     </div>
   </footer>
 

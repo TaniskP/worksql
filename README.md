@@ -34,7 +34,7 @@ and the sloppy queries that must fail.
 ## Work mode, reference pages, nudges
 
 - `/work`: clock in to an SSMS-style window. It fills in as you go: mail first, the query window when you open one, results after
-  the first run, the reply button after a run that worked. First visit is one Clock in button and Monday starts with James's
+  the first run, the reply button after a run that worked. First visit is one Clock in button and Monday starts with Harvey's
   date ticket; the day picker appears once a ticket is closed. The guided tour is on the ? Tour button, not automatic.
 - `/tsql` and `/tsql/<slug>`: server-rendered T-SQL reference pages (`src/articles.js`), plus `/sitemap.xml` and `/robots.txt`.
   Set `SITE_URL` in production so canonical links and sitemap URLs use the real domain.

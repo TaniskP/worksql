@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>WorkSQL - Clock in. The inbox is waiting.</title>
-  <meta name="description" content="Practise SQL Server the way you use it at work: clock in, get tickets from colleagues, write T-SQL in a query window, send the results. Five minutes a ticket.">
+  <meta name="description" content="Practise SQL Server through realistic requests from colleagues. Read the email, write the query and get feedback on your result.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cellipse cx='16' cy='7' rx='11' ry='4' fill='%231f5eff'/%3E%3Cpath d='M5 7v18c0 2.2 4.9 4 11 4s11-1.8 11-4V7c0 2.2-4.9 4-11 4S5 9.2 5 7Z' fill='%231f5eff' opacity='.75'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
@@ -16,47 +16,50 @@
       <nav class="nav">
         <a href="/" class="logo" data-logo>WorkSQL</a>
         <div class="nav-links">
-          <a href="/guides">Guides</a>
-          <a href="/tools">Free tools</a>
-          <a href="/convert">Convert</a>
-          <a href="/interview">Interview</a>
-          <a href="/lessons">Lessons</a>
+          <a href="/lessons">Guided lessons</a>
+          <details class="nav-res">
+            <summary>Resources</summary>
+            <div class="nav-res-list">
+              <form class="nav-res-find" action="/guides" method="get" role="search">
+                <label class="visually-hidden" for="nav-q">Search tools and guides</label>
+                <input id="nav-q" name="q" type="search" placeholder="Search tools and guides…" autocomplete="off">
+              </form>
+              <a href="/guides">Guides</a>
+              <a href="/tsql">T-SQL reference</a>
+              <a href="/tools">Free tools</a>
+              <a href="/convert">Convert</a>
+              <a href="/interview">Interview</a>
+            </div>
+          </details>
           <a href="/pricing">Pricing</a>
         </div>
         <details class="nav-more">
           <summary>Menu</summary>
           <div class="nav-more-list">
+            <a href="/lessons">Guided lessons</a>
             <a href="/guides">Guides</a>
+            <a href="/tsql">T-SQL reference</a>
             <a href="/tools">Free tools</a>
             <a href="/convert">Convert</a>
             <a href="/interview">Interview</a>
-            <a href="/lessons">Lessons</a>
             <a href="/pricing">Pricing</a>
           </div>
         </details>
         <div class="nav-actions">
-          <a href="/work" class="btn btn-primary" data-clockin>Clock in</a>
+          <a href="/work" class="btn btn-primary" data-clockin>Clock in free</a>
         </div>
       </nav>
     </header>
 
     <div class="hero-body">
       <div class="hero-eyebrow"><span class="dot"></span> Harbour &amp; Co · <span id="hero-clock">09:14</span> · 1 new message</div>
-      <h1>Clock in.<span class="blue">James needs last week’s</span><span class="blue">orders by ten.</span></h1>
-      <p class="lead">SQL Server, five minutes. You write the query. We tell you if it’s right. No videos: a ticket lands — one short job from a colleague, like James needing last week’s orders — you type, you send it back.</p>
+      <h1>Clock in.<span class="blue">Harvey needs last week’s</span><span class="blue">orders by ten.</span></h1>
+      <p class="lead">Practise SQL Server through realistic requests from colleagues. Read the email, write the query and get feedback on your result—one short workplace task at a time.</p>
       <div class="hero-ctas">
-        <a href="/work" class="btn btn-primary btn-lg" data-clockin>Clock in free <span data-icon="arrow"></span></a>
-        <a href="/lessons" class="btn btn-ghost btn-lg">Learn step by step first</a>
+        <a href="/work?go=1" class="btn btn-primary btn-lg" data-clockin>Clock in free <span data-icon="arrow"></span></a>
+        <a href="/lessons" class="btn btn-ghost btn-lg">Guided lessons</a>
       </div>
-      <div class="small">No sign-up. Monday’s shift is free.</div>
-
-      <div class="hero-search" id="hero-search">
-        <form class="hero-find" role="search" action="/guides" method="get">
-          <label class="visually-hidden" for="find">Find a tool, guide, or converter</label>
-          <input id="find" name="q" type="search" placeholder="Find a tool, guide, or converter…" autocomplete="off">
-        </form>
-        <div class="hero-find-drop" id="find-drop" hidden></div>
-      </div>
+      <div class="hero-offer">10 free tickets · No sign-up · Start any day</div>
 
       <div class="hero-points">
         <div><span data-icon="bolt"></span>You type,<br>every ticket</div>
@@ -70,10 +73,7 @@
     <div class="section-head">
       <div class="eyebrow">How a shift works</div>
       <h2>One ticket, start to finish.</h2>
-      <p>A ticket is the unit of this app. A colleague asks for a result. You write the T-SQL in a window that looks like SSMS. We mark it the way they would — not four multiple-choice options. If it’s right, the next one lands.</p>
-      <aside class="ticket-what">
-        <p><b>What a ticket is worth.</b> At work it is the inbox item: last week’s orders by ten, returns that don’t match, a JOIN that doubled the total. Here it is the same thing — one request, one query, a mark. Five minutes. The value is you type every time, until the habit is there. Monday’s shift is free.</p>
-      </aside>
+      <p>Read the request. Write the query. Check your result. Send the reply.</p>
     </div>
 
     <div class="demo" id="demo" aria-label="Animated demo: one ticket from inbox to reply"></div>
@@ -87,12 +87,12 @@
 
   <section class="section split">
     <div>
-      <div class="eyebrow">A working week, not a syllabus</div>
-      <h2 id="week-title">Monday is free. The rest of the week is the real inbox.</h2>
-      <p style="color:var(--ink-2);font-size:17px;margin:14px 0 0" id="week-blurb">Seven working days of about six tickets each. A walkthrough the first time you meet CASE, LEFT JOIN or a CTE, then two reps on your own. Five minutes a ticket is a month of days.</p>
+      <div class="eyebrow">The week</div>
+      <h2 id="week-title">46 workplace tickets across 7 simulated workdays.</h2>
+      <p style="color:var(--ink-2);font-size:17px;margin:14px 0 0" id="week-blurb">Start with 10 free tickets and work through the rest at your own pace.</p>
       <div class="hero-ctas" style="margin-top:28px">
-        <a href="/work" class="btn btn-primary btn-lg" data-clockin>Clock in free <span data-icon="arrow"></span></a>
-        <a href="/lessons" class="btn btn-ghost btn-lg">See every ticket</a>
+        <a href="/work?go=1" class="btn btn-primary btn-lg" data-clockin>Clock in free <span data-icon="arrow"></span></a>
+        <a href="/lessons" class="btn btn-ghost btn-lg">Guided lessons</a>
       </div>
     </div>
     <div class="card" style="padding:8px">
@@ -187,101 +187,63 @@
         </a>
       </div>
       <p class="spot-more"><a class="btn btn-ghost btn-lg" href="/guides">View all guides</a></p>
-      <p class="pricing-note"><a href="/tools">Free T-SQL tools</a> · <a href="/convert">Excel / Pandas / dialects</a> · <a href="/interview">Interview sandbox</a></p>
     </div>
   </section>
 
   <section class="section" id="tsql">
-    <div class="spot">
-      <header class="lib-head">
-        <h2>Looking something up?</h2>
-        <p>The SQL Server functions people search for at work, each with a ticket to try it on.</p>
-      </header>
-      <form class="lib-search" role="search" action="/tsql" method="get">
-        <label class="visually-hidden" for="ref-q">Search T-SQL</label>
-        <input id="ref-q" name="q" type="search" placeholder="GETDATE, ISNULL, ROW_NUMBER…" autocomplete="off">
-        <button class="btn btn-primary" type="submit">Search T-SQL</button>
-      </form>
-      <p class="spot-try">Try: <a href="/tsql/getdate">GETDATE</a>, <a href="/tsql/case-when">CASE</a>, <a href="/tsql/row-number">ROW_NUMBER</a></p>
-      <div class="lib-chips" id="ref-chips">
-        <button type="button" class="lib-chip" data-cat="" aria-pressed="true">All</button>
-        <button type="button" class="lib-chip" data-cat="Dates">Dates</button>
-        <button type="button" class="lib-chip" data-cat="Types">Types</button>
-        <button type="button" class="lib-chip" data-cat="Totals">Totals</button>
-        <button type="button" class="lib-chip" data-cat="Window">Window</button>
-        <a class="lib-chip" href="/tsql?q=JOIN">Joins</a>
+    <div class="ref-desk">
+      <div>
+        <header class="lib-head">
+          <h2>Looking something up?</h2>
+          <p>50+ T-SQL pages. A familiar name, a query, and the result—without another catalogue on this page.</p>
+        </header>
+        <div class="ref-topics">
+          <a href="/tsql/getdate">GETDATE</a>
+          <a href="/tsql/case-when">CASE</a>
+          <a href="/tsql/isnull">ISNULL</a>
+          <a href="/tsql/row-number">ROW_NUMBER</a>
+          <a href="/tsql?q=JOIN">JOIN</a>
+        </div>
+        <a class="btn btn-ghost btn-lg" href="/tsql">Explore the reference</a>
       </div>
-      <div class="lib-meta">
-        <h3>Browse T-SQL</h3>
-        <p class="guide-count" id="ref-count">6 to start</p>
-      </div>
-      <div class="spot-grid" id="ref-grid">
-        <a class="spot-card" href="/tsql/getdate" data-cat="Dates">
-          <div class="spot-vis vis-code" aria-hidden="true">
-            <code>CAST(GETDATE() AS date)</code>
-            <code>DATEADD(day, -7, today)</code>
-          </div>
-          <span class="lib-cat">Dates</span>
-          <b>GETDATE()</b>
-          <span class="lib-short">Today, yesterday, last week. And why “last 7 days” keeps including today.</span>
-        </a>
-        <a class="spot-card" href="/tsql/dateadd" data-cat="Dates">
-          <div class="spot-vis vis-code" aria-hidden="true">
-            <code>DATEADD(day, -7, GETDATE())</code>
-            <code>DATEADD(month, 1, start_date)</code>
-          </div>
-          <span class="lib-cat">Dates</span>
-          <b>DATEADD</b>
-          <span class="lib-short">Move a date backwards or forwards by any unit.</span>
-        </a>
-        <a class="spot-card" href="/tsql/isnull" data-cat="Types">
-          <div class="spot-vis vis-split" aria-hidden="true">
-            <div><i>NULL</i><em>unknown</em></div>
-            <div><i>ISNULL</i><em>No phone</em></div>
-          </div>
-          <span class="lib-cat">Types</span>
-          <b>ISNULL</b>
-          <span class="lib-short">Swap NULL for a word or a zero. ISNULL or COALESCE?</span>
-        </a>
-        <a class="spot-card" href="/tsql/top" data-cat="Totals">
-          <div class="spot-vis vis-code" aria-hidden="true">
-            <code>SELECT TOP 5 order_id, total_amount</code>
-            <code>FROM Orders</code>
-            <code>ORDER BY total_amount DESC</code>
-          </div>
-          <span class="lib-cat">Totals</span>
-          <b>TOP</b>
-          <span class="lib-short">The first N rows. Meaningless without ORDER BY.</span>
-        </a>
-        <a class="spot-card" href="/tsql/case-when" data-cat="Totals">
-          <div class="spot-vis vis-split" aria-hidden="true">
-            <div><i>WHEN</i><em>&lt; 50 Small</em></div>
-            <div><i>ELSE</i><em>Medium</em></div>
-          </div>
-          <span class="lib-cat">Totals</span>
-          <b>CASE WHEN</b>
-          <span class="lib-short">Small, Medium, Large. If-then-else inside a query.</span>
-        </a>
-        <a class="spot-card" href="/tsql/row-number" data-cat="Window">
-          <div class="spot-vis vis-code" aria-hidden="true">
-            <code>ROW_NUMBER() OVER (</code>
-            <code>  PARTITION BY customer_id</code>
-            <code>  ORDER BY order_date DESC)</code>
-          </div>
-          <span class="lib-cat">Window</span>
-          <b>ROW_NUMBER</b>
-          <span class="lib-short">Latest order per customer, the whole row.</span>
-        </a>
-      </div>
-      <p class="spot-more"><a class="btn btn-ghost btn-lg" href="/tsql">View all T-SQL pages</a></p>
+      <a class="ref-example" href="/tsql/getdate">
+        <span class="lib-cat">Dates · GETDATE()</span>
+        <pre>WHERE order_date &gt;= DATEADD(day, -7, CAST(GETDATE() AS date))
+  AND order_date &lt; CAST(GETDATE() AS date)</pre>
+        <table>
+          <thead>
+            <tr><th>order_id</th><th>customer</th><th>order_date</th><th>total</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>10482</td><td>Isla Grant</td><td>yesterday</td><td>98.80</td></tr>
+            <tr><td>10480</td><td>Nina Shah</td><td>2 days ago</td><td>69.00</td></tr>
+            <tr><td>10479</td><td>Niamh Quinn</td><td>3 days ago</td><td>243.00</td></tr>
+          </tbody>
+        </table>
+      </a>
     </div>
+  </section>
+
+  <section class="close-strip" id="start">
+    <h2>Your first task is waiting.</h2>
+    <p>10 free tickets. No sign-up. Start whenever you’re ready.</p>
+    <a href="/work?go=1" class="btn btn-primary btn-lg" data-clockin>Clock in free <span data-icon="arrow"></span></a>
   </section>
 
   <footer class="footer">
     <div class="inner">
       <a href="/" class="logo" data-logo style="font-size:16px">WorkSQL</a>
       <span>SQL Server, five minutes.</span>
-      <div class="links"><a href="/work">Work mode</a><a href="/guides">Guides</a><a href="/tools">Free tools</a><a href="/convert">Convert</a><a href="/interview">Interview</a><a href="/tsql">T-SQL reference</a><a href="/pricing">Pricing</a></div>
+      <div class="links">
+        <a href="/work">Workplace practice</a>
+        <a href="/lessons">Guided lessons</a>
+        <a href="/guides">Guides</a>
+        <a href="/tsql">T-SQL reference</a>
+        <a href="/pricing">Pricing</a>
+        <a href="/support">Support</a>
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+      </div>
     </div>
   </footer>
 
@@ -292,70 +254,40 @@
 
     // Work mode needs a laptop-sized screen. On a phone, the door leads to the lessons instead.
     if (matchMedia('(max-width: 960px)').matches) {
-      document.querySelectorAll('[data-clockin]').forEach((a) => { a.href = '/lessons'; a.firstChild.textContent = a.closest('nav') ? 'Start free ' : 'Start Monday free '; });
+      document.querySelectorAll('[data-clockin]').forEach((a) => { a.href = '/lessons'; a.firstChild.textContent = a.closest('nav') ? 'Start free ' : 'Start free '; });
     }
-    document.getElementById('hero-clock').textContent = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 
-    // The week, as inboxes: what each day holds. Locks live on /lessons and /pricing, not here.
     fetch('/api/lessons').then((r) => r.json()).then(({ days, lessons }) => {
-      document.getElementById('week-blurb').textContent = `${days.length} working days of about six tickets each: ${lessons.length} in all. A walkthrough the first time you meet CASE, LEFT JOIN or a CTE, then two reps on your own. Five minutes a ticket is a month of days.`;
+      document.getElementById('week-title').textContent = `${lessons.length} workplace tickets across ${days.length} simulated workdays.`;
       document.getElementById('preview-list').innerHTML = days.map((d) => {
         const ls = lessons.filter((l) => l.day === d.id);
+        const free = ls.every((l) => l.free);
+        const when = d.week === 1 ? d.name : `Week 2 ${d.name}`;
+        const extra = free ? ' · Free' : '';
         return `<li><a class="lesson-row" href="/lessons#day-${d.id}">
-          <span class="state">${d.id}</span><span class="n"></span>
-          <span class="topic">W${d.week} ${esc(d.name)}</span>
-          <span class="blurb">${ls.length} tickets · ${esc(d.title)}</span>
+          <span class="state">${d.id}</span>
+          <span class="topic">${esc(d.title)}</span>
+          <span class="blurb">${esc(when)} · ${ls.length} tickets${extra}</span>
           <span class="chev">${icons.chev}</span></a></li>`;
       }).join('') + `<li><a class="lesson-row" href="/lessons" style="color:var(--blue);font-weight:600;display:block">See all ${lessons.length} tickets by name</a></li>`;
     });
 
-    const bindSpot = (chipsId, gridId, countId) => {
-      const chips = document.getElementById(chipsId);
-      const cards = [...document.querySelectorAll(`#${gridId} .spot-card`)];
-      const count = document.getElementById(countId);
-      chips.addEventListener('click', (e) => {
-        const b = e.target.closest('.lib-chip');
-        if (!b || b.tagName === 'A') return;
-        for (const x of chips.querySelectorAll('button.lib-chip')) x.setAttribute('aria-pressed', x === b ? 'true' : 'false');
-        const cat = b.getAttribute('data-cat') || '';
-        let n = 0;
-        for (const el of cards) {
-          const on = !cat || el.getAttribute('data-cat') === cat;
-          el.hidden = !on;
-          if (on) n++;
-        }
-        count.textContent = cat ? n + ' of 6' : '6 to start';
-      });
-    };
-    bindSpot('spot-chips', 'spot-grid', 'spot-count');
-    bindSpot('ref-chips', 'ref-grid', 'ref-count');
-
-    const find = document.getElementById('find');
-    const drop = document.getElementById('find-drop');
-    let catalog = [];
-    fetch('/api/lookup').then((r) => r.json()).then(({ items }) => {
-      catalog = items || [];
-      if (find.value.trim()) paint(find.value);
-    });
-    const paint = (q) => {
-      const s = (q || '').trim().toLowerCase();
-      if (!s) { drop.hidden = true; drop.innerHTML = ''; return; }
-      const hits = catalog.filter((it) => it.search.includes(s)).slice(0, 8);
-      drop.hidden = false;
-      if (!hits.length) {
-        drop.innerHTML = '<p class="hero-find-empty">Nothing matches. Try VLOOKUP, LEFT JOIN, or formatter.</p>';
-        return;
+    const chips = document.getElementById('spot-chips');
+    const cards = [...document.querySelectorAll('#spot-grid .spot-card')];
+    const count = document.getElementById('spot-count');
+    chips.addEventListener('click', (e) => {
+      const b = e.target.closest('.lib-chip');
+      if (!b || b.tagName === 'A') return;
+      for (const x of chips.querySelectorAll('button.lib-chip')) x.setAttribute('aria-pressed', x === b ? 'true' : 'false');
+      const cat = b.getAttribute('data-cat') || '';
+      let n = 0;
+      for (const el of cards) {
+        const on = !cat || el.getAttribute('data-cat') === cat;
+        el.hidden = !on;
+        if (on) n++;
       }
-      drop.innerHTML = hits.map((it) => `<a href="${esc(it.href)}"><span class="kind">${esc(it.kind)}</span><b>${esc(it.name)}</b><span>${esc(it.short)}</span></a>`).join('');
-    };
-    find.addEventListener('input', () => paint(find.value));
-    find.addEventListener('focus', () => { if (find.value.trim()) paint(find.value); });
-    find.closest('form').addEventListener('submit', (e) => {
-      const first = drop.querySelector('a');
-      if (first) { e.preventDefault(); location.href = first.href; }
+      count.textContent = cat ? n + ' of 6' : '6 to start';
     });
-    document.addEventListener('click', (e) => { if (!e.target.closest('#hero-search')) drop.hidden = true; });
-    find.addEventListener('keydown', (e) => { if (e.key === 'Escape') { drop.hidden = true; find.blur(); } });
   </script>
   <script type="module" src="/js/demo.js"></script>
 </body>

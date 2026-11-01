@@ -3,7 +3,7 @@
 
 const { esc, sql, c } = require('./article-html');
 const extra = require('./topics');
-const { navInner } = require('./nav');
+const { navInner, footerInner } = require('./nav');
 const { catalogSearch, searchBits, catalogCard } = require('./search');
 
 const TOPIC_ORDER = ['At work', 'Joins', 'Dates', 'Window', 'Aggregates', 'Types', 'Functions'];
@@ -314,7 +314,7 @@ GROUP BY status;   -- without this line, COUNT(*) is one total for the whole tab
     lede: 'When someone says “last week’s orders” they mean the calendar week that just finished, not a sliding window of 168 hours. Those two queries return different money.',
     body: () => `
 <h2>What they actually asked for</h2>
-<p>James wants last week. If today is Thursday 30 October, last week is Monday 20 to Sunday 26, not “from last Thursday until now”. A rolling ${c('DATEADD(day, -7, GETDATE())')} includes this morning and drops half of last Thursday.</p>
+<p>Harvey wants last week. If today is Thursday 30 October, last week is Monday 20 to Sunday 26, not “from last Thursday until now”. A rolling ${c('DATEADD(day, -7, GETDATE())')} includes this morning and drops half of last Thursday.</p>
 <h2>UK week: Monday to Sunday</h2>
 ${sql(`DECLARE @today date = CAST(GETDATE() AS date);
 DECLARE @thisMonday date = DATEADD(day, 1 - DATEPART(weekday, DATEADD(day, -1, @today)), @today);
@@ -635,11 +635,11 @@ function page({ title, description, body, canonical, shell }) {
     <nav class="nav">
       <a href="/" class="logo"><svg viewBox="0 0 32 32" fill="none" width="26" height="26"><ellipse cx="16" cy="7" rx="11" ry="4" fill="#1f5eff"/><path d="M5 7v18c0 2.2 4.9 4 11 4s11-1.8 11-4V7c0 2.2-4.9 4-11 4S5 9.2 5 7Z" fill="#1f5eff" opacity=".75"/></svg>WorkSQL</a>
       ${navInner(canonical)}
-      <div class="nav-actions"><a href="/work" class="btn btn-primary">Clock in</a></div>
+      <div class="nav-actions"><a href="/work" class="btn btn-primary">Clock in free</a></div>
     </nav>
   </header>
   <main>${body}</main>
-  <footer class="footer"><div class="inner"><span>WorkSQL · SQL Server, five minutes.</span><div class="links"><a href="/guides">Guides</a><a href="/tools">Free tools</a><a href="/convert">Convert</a><a href="/interview">Interview</a><a href="/tsql">T-SQL reference</a><a href="/work">Work mode</a></div></div></footer>
+  <footer class="footer">${footerInner()}</footer>
 </body>
 </html>`;
 }
@@ -684,7 +684,7 @@ function renderIndex(origin) {
   const refs = articles.filter((a) => !isGuide(a));
   const body = `<article class="article">
     <h1>T-SQL reference</h1>
-    <p class="lede">Short answers to the SQL Server functions people search for at work. Each one ends with a ticket you can try it on. For the “James needs last week” kind of job, see <a href="/guides">Guides</a>.</p>
+    <p class="lede">Short answers to the SQL Server functions people search for at work. Each one ends with a ticket you can try it on. For the “Harvey needs last week” kind of job, see <a href="/guides">Guides</a>.</p>
     ${catalogSearch({ placeholder: 'GETDATE, DATEADD, CASE, ROW_NUMBER…', total: refs.length, noun: 'pages' })}
     <div class="ref-links">${refs.map((a) => `<a class="ref-link" href="${pathOf(a)}" data-search="${searchBits(a.name + ' ' + a.title + ' ' + a.short + ' ' + a.slug)}"><b>${esc(a.name)}</b><span>${esc(a.short)}</span></a>`).join('')}</div>
   </article>`;
@@ -709,7 +709,7 @@ function renderGuides(origin) {
 }
 
 function sitemapPaths() {
-  return ['/', '/work', '/lessons', '/pricing', '/guides', '/tsql', ...articles.map(pathOf)];
+  return ['/', '/work', '/lessons', '/pricing', '/guides', '/tsql', '/support', '/privacy', '/terms', ...articles.map(pathOf)];
 }
 
 function listing(a) {

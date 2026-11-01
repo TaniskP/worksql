@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Terms · WorkSQL</title>
+  <meta name="description" content="Terms of use for WorkSQL.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+  <header class="site-header" style="border-bottom:1px solid var(--line)">
+    <nav class="nav">
+      <a href="/" class="logo" data-logo>WorkSQL</a>
+      <div class="nav-links">
+        <a href="/lessons">Guided lessons</a>
+        <details class="nav-res">
+          <summary>Resources</summary>
+          <div class="nav-res-list">
+            <a href="/guides">Guides</a>
+            <a href="/tsql">T-SQL reference</a>
+            <a href="/tools">Free tools</a>
+            <a href="/convert">Convert</a>
+            <a href="/interview">Interview</a>
+          </div>
+        </details>
+        <a href="/pricing">Pricing</a>
+      </div>
+      <details class="nav-more">
+        <summary>Menu</summary>
+        <div class="nav-more-list">
+          <a href="/lessons">Guided lessons</a>
+          <a href="/guides">Guides</a>
+          <a href="/pricing">Pricing</a>
+        </div>
+      </details>
+      <div class="nav-actions"><a href="/work" class="btn btn-primary">Clock in free</a></div>
+    </nav>
+  </header>
+  <main class="article">
+    <h1>Terms</h1>
+    <p class="lede">WorkSQL is a paid practice product for SQL Server. These terms are short on purpose.</p>
+    <h2>The product</h2>
+    <p>You write T-SQL against a fictional company, Harbour &amp; Co. The first 10 tickets are free. A paid plan unlocks the remaining tickets. Queries run in our sandbox, never against your data.</p>
+    <h2>Accounts and access</h2>
+    <p>There is no password sign-up. Paying through Stripe unlocks this browser. If you lose the cookie, restore access from the pricing page with the checkout email. Don’t buy a second time for the same email.</p>
+    <h2>Billing</h2>
+    <p>Prices are in GBP. Monthly is £9.99. Yearly is £79. You can cancel from Stripe’s billing page. Paid access lasts until the period you bought ends.</p>
+    <h2>Use</h2>
+    <p>The site, tickets and reference pages are for your own learning. Don’t scrape the catalogue to republish it. The sandbox is not a place to run other people’s production queries.</p>
+    <p><a href="/privacy">Privacy</a> · <a href="/support">Support</a></p>
+  </main>
+  <footer class="footer">
+    <div class="inner">
+      <span>WorkSQL · SQL Server, five minutes.</span>
+      <div class="links"><a href="/support">Support</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></div>
+    </div>
+  </footer>
+  <script type="module">
+    import { icons } from '/js/common.js';
+    document.querySelector('[data-logo]').insertAdjacentHTML('afterbegin', icons.logo);
+  </script>
+</body>
+</html>

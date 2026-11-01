@@ -13,21 +13,32 @@
     <div class="inner">
       <a href="/" class="logo" data-logo>WorkSQL</a>
       <div class="nav-links">
-        <a href="/guides">Guides</a>
-        <a href="/tools">Free tools</a>
-        <a href="/convert">Convert</a>
-        <a href="/interview">Interview</a>
-        <a href="/lessons" aria-current="page">Lessons</a>
+        <a href="/lessons" aria-current="page">Guided lessons</a>
+        <details class="nav-res">
+          <summary>Resources</summary>
+          <div class="nav-res-list">
+            <form class="nav-res-find" action="/guides" method="get" role="search">
+              <label class="visually-hidden" for="nav-q">Search tools and guides</label>
+              <input id="nav-q" name="q" type="search" placeholder="Search tools and guides…" autocomplete="off">
+            </form>
+            <a href="/guides">Guides</a>
+            <a href="/tsql">T-SQL reference</a>
+            <a href="/tools">Free tools</a>
+            <a href="/convert">Convert</a>
+            <a href="/interview">Interview</a>
+          </div>
+        </details>
         <a href="/pricing">Pricing</a>
       </div>
       <details class="nav-more">
         <summary>Menu</summary>
         <div class="nav-more-list">
+          <a href="/lessons">Guided lessons</a>
           <a href="/guides">Guides</a>
+          <a href="/tsql">T-SQL reference</a>
           <a href="/tools">Free tools</a>
           <a href="/convert">Convert</a>
           <a href="/interview">Interview</a>
-          <a href="/lessons">Lessons</a>
           <a href="/pricing">Pricing</a>
         </div>
       </details>
@@ -41,9 +52,9 @@
       <div id="paths"></div>
       <aside>
         <div class="card side-card work-card">
-          <h3>Work mode</h3>
-          <p style="margin-bottom:14px">Same tickets, no classroom. Clock in at Harbour &amp; Co: an inbox, a query window, and colleagues waiting on results.</p>
-          <a class="btn btn-primary" style="width:100%" href="/work">Clock in</a>
+          <h3>Workplace practice</h3>
+          <p style="margin-bottom:14px">Same tickets, no classroom. Open the inbox at Harbour &amp; Co: a query window, and colleagues waiting on results.</p>
+          <a class="btn btn-primary" style="width:100%" href="/work">Workplace practice</a>
         </div>
         <div class="card side-card">
           <h3>Your streak</h3>
@@ -115,7 +126,7 @@
     document.getElementById('meter').style.width = `${(n / lessons.length) * 100}%`;
     document.getElementById('progress-note').textContent = `${n} of ${lessons.length} tickets done.`;
     accountCard(document.getElementById('plan-card'), {
-      freeHtml: `<h3>Free plan</h3><p style="margin-bottom:14px">Monday is free. ${paidDays} more days, ${paidLessons.length} tickets, from about £6.60 a month.</p><a class="btn btn-primary" style="width:100%" href="/pricing">See plans</a>`,
+      freeHtml: `<h3>Free plan</h3><p style="margin-bottom:14px">10 free tickets. ${paidDays} more days, ${paidLessons.length} tickets, from £6.58 a month on the yearly plan.</p><a class="btn btn-primary" style="width:100%" href="/pricing">See plans</a>`,
     });
     restoreForm(document.getElementById('already-paid'));
     const justIn = new URLSearchParams(location.search);

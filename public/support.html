@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Support · WorkSQL</title>
+  <meta name="description" content="Restore paid access and find help with WorkSQL.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+  <header class="site-header" style="border-bottom:1px solid var(--line)">
+    <nav class="nav">
+      <a href="/" class="logo" data-logo>WorkSQL</a>
+      <div class="nav-links">
+        <a href="/lessons">Guided lessons</a>
+        <details class="nav-res">
+          <summary>Resources</summary>
+          <div class="nav-res-list">
+            <a href="/guides">Guides</a>
+            <a href="/tsql">T-SQL reference</a>
+            <a href="/tools">Free tools</a>
+            <a href="/convert">Convert</a>
+            <a href="/interview">Interview</a>
+          </div>
+        </details>
+        <a href="/pricing">Pricing</a>
+      </div>
+      <details class="nav-more">
+        <summary>Menu</summary>
+        <div class="nav-more-list">
+          <a href="/lessons">Guided lessons</a>
+          <a href="/guides">Guides</a>
+          <a href="/tsql">T-SQL reference</a>
+          <a href="/tools">Free tools</a>
+          <a href="/convert">Convert</a>
+          <a href="/interview">Interview</a>
+          <a href="/pricing">Pricing</a>
+        </div>
+      </details>
+      <div class="nav-actions"><a href="/work" class="btn btn-primary">Clock in free</a></div>
+    </nav>
+  </header>
+  <main class="article">
+    <h1>Support</h1>
+    <p class="lede">Two ways in: workplace practice in the inbox, or guided lessons one ticket at a time. Both use the same Harbour &amp; Co tickets.</p>
+    <h2>I paid, but this browser is locked</h2>
+    <p>Clearing cookies signs you out. Use <a href="/pricing#already-paid">Already paid</a> on the pricing page with the email from checkout. We’ll send a 15-minute restore link. Don’t buy again.</p>
+    <h2>Where do I start?</h2>
+    <p><a href="/work">Workplace practice</a> opens the inbox. <a href="/lessons">Guided lessons</a> lets you pick a lesson and learn step by step. The first 10 tickets are free. No sign-up.</p>
+    <h2>Plans and billing</h2>
+    <p>Monthly is £9.99. Yearly is £79 — equivalent to £6.58/month, 34% less than twelve monthly payments. Cancel when you like from the billing page after checkout.</p>
+    <p><a class="btn btn-primary" href="/pricing">Pricing</a> <a class="btn btn-ghost" href="/lessons">Guided lessons</a></p>
+  </main>
+  <footer class="footer">
+    <div class="inner">
+      <span>WorkSQL · SQL Server, five minutes.</span>
+      <div class="links"><a href="/work">Workplace practice</a><a href="/lessons">Guided lessons</a><a href="/pricing">Pricing</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></div>
+    </div>
+  </footer>
+  <script type="module">
+    import { icons } from '/js/common.js';
+    document.querySelector('[data-logo]').insertAdjacentHTML('afterbegin', icons.logo);
+  </script>
+</body>
+</html>

@@ -9,7 +9,7 @@
 
 
 const P = {
-  james: { name: 'James Rowe', role: 'Sales Manager' },
+  james: { name: 'Harvey Rowe', role: 'Sales Manager' },
   amy: { name: 'Amy Nair', role: 'Finance Lead' },
   tom: { name: 'Tom Gallagher', role: 'Warehouse Lead' },
   becky: { name: 'Becky Ashworth', role: 'Support' },
@@ -20,12 +20,12 @@ const P = {
 
 // The working week. Day 1 is free; every paid day is about six tickets, so a five-minute habit lasts a month.
 const days = [
-  { id: 1, week: 1, name: 'Monday', title: 'Monday Basics', blurb: 'Five habits every SSMS user needs. Each one taught step by step, then done again on your own.' },
-  { id: 2, week: 1, name: 'Tuesday', title: 'Totals', blurb: 'TOP, COUNT and SUM, GROUP BY, HAVING. The numbers people ask for first.' },
-  { id: 3, week: 1, name: 'Wednesday', title: 'Labels and months', blurb: 'CASE for a slide, size bands, revenue by month, best sellers.' },
-  { id: 4, week: 1, name: 'Thursday', title: 'Missing rows', blurb: 'LEFT JOIN, the ON-versus-WHERE trap, self-joins, EXISTS.' },
+  { id: 1, week: 1, name: 'Monday', title: 'Query basics', blurb: 'Five habits every SSMS user needs. Each one taught step by step, then done again on your own.' },
+  { id: 2, week: 1, name: 'Tuesday', title: 'Totals and grouping', blurb: 'TOP, COUNT and SUM, GROUP BY, HAVING. The numbers people ask for first.' },
+  { id: 3, week: 1, name: 'Wednesday', title: 'CASE and monthly reports', blurb: 'CASE for a slide, size bands, revenue by month, best sellers.' },
+  { id: 4, week: 1, name: 'Thursday', title: 'Missing rows and joins', blurb: 'LEFT JOIN, the ON-versus-WHERE trap, self-joins, EXISTS.' },
   { id: 5, week: 1, name: 'Friday', title: 'Clean-up and fixes', blurb: 'Messy names, duplicates, and three colleagues’ broken queries.' },
-  { id: 6, week: 2, name: 'Monday', title: 'CTEs and latest rows', blurb: 'Name a query and reuse it. ROW_NUMBER for the latest row per customer.' },
+  { id: 6, week: 2, name: 'Monday', title: 'CTEs and latest records', blurb: 'Name a query and reuse it. ROW_NUMBER for the latest row per customer.' },
   { id: 7, week: 2, name: 'Tuesday', title: 'Windows and review', blurb: 'Running totals, RANK, LAG, percent of total, and an interview pair.' },
 ];
 
@@ -170,7 +170,7 @@ const lessons = [
       { text: 'The query below is already typed. The o after Orders is an alias, a short name for the table. Run it as it is.',
         starter: `SELECT o.order_id, o.customer_id, o.order_date, o.total_amount\nFROM Orders o\nWHERE o.order_date >= DATEADD(day, -7, CAST(GETDATE() AS date))\n  AND o.order_date < CAST(GETDATE() AS date)`,
         solution: `SELECT order_id, customer_id, order_date, total_amount FROM Orders WHERE ${LAST_7}`,
-        done: 'Last week with IDs. James doesn’t know who 1021 is. Customers does.' },
+        done: 'Last week with IDs. Harvey doesn’t know who 1021 is. Customers does.' },
       { text: "Under FROM Orders o, add: JOIN Customers c ON c.customer_id = o.customer_id. Then swap o.customer_id for c.first_name + ' ' + c.last_name AS customer_name.",
         solution: `SELECT o.order_id, c.first_name + ' ' + c.last_name AS customer_name, o.order_date, o.total_amount FROM Orders o JOIN Customers c ON c.customer_id = o.customer_id WHERE o.${LAST_7.replace(' AND order_date', ' AND o.order_date')}`,
         done: 'The ON line is the whole trick: it says which customer row belongs to which order.' },
@@ -434,7 +434,7 @@ const lessons = [
     steps: [
       { text: 'Answer it with IDs first: each customer_id and their MAX(order_date) AS last_order_date, grouped by customer.',
         solution: 'SELECT customer_id, MAX(order_date) AS last_order_date FROM Orders GROUP BY customer_id',
-        done: 'Right answer, wrong labels. James doesn’t know who 1014 is. Next, name this query so you can join to it.' },
+        done: 'Right answer, wrong labels. Harvey doesn’t know who 1014 is. Next, name this query so you can join to it.' },
       { final: true, text: 'Wrap it: WITH last_orders AS ( your query ) then SELECT from last_orders, join Customers for the name, newest first.' },
     ],
     solution: "WITH last_orders AS (SELECT customer_id, MAX(order_date) AS last_order_date FROM Orders GROUP BY customer_id) SELECT c.first_name + ' ' + c.last_name AS customer_name, l.last_order_date FROM last_orders l JOIN Customers c ON c.customer_id = l.customer_id ORDER BY l.last_order_date DESC",

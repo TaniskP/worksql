@@ -19,6 +19,7 @@ for (const a of articles) {
 }
 
 assert.ok(sitemapPaths().includes('/guides') && sitemapPaths().includes('/guides/last-week-orders'));
+assert.ok(sitemapPaths().includes('/support') && sitemapPaths().includes('/privacy') && sitemapPaths().includes('/terms'));
 assert.ok(renderGuides('https://worksql.com').includes('last-week-orders'));
 assert.ok(renderGuides('https://worksql.com').includes('data-search=') && renderGuides('https://worksql.com').includes('id="q"'));
 assert.ok(renderGuides('https://worksql.com').includes('class="lib"') && renderGuides('https://worksql.com').includes('lib-chip'));

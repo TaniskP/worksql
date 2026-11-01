@@ -60,7 +60,7 @@ LEFT JOIN Customers c ON c.customer_id = o.customer_id;`)}
 <div class="mistake"><b>Mixing LEFT and RIGHT in one query</b>
 <p>It parses. Nobody can tell you what it means in six months. Pick a side, stay there. At Harbour &amp; Co we only write INNER and LEFT.</p></div>
 <h2>So are they used?</h2>
-<p>Generated SQL, old Access upsizes, and people who learned from a slide that listed every join type. Not in a ticket you send to James.</p>`),
+<p>Generated SQL, old Access upsizes, and people who learned from a slide that listed every join type. Not in a ticket you send to Harvey.</p>`),
 
   g('full-outer-join', 'FULL OUTER JOIN', 19,
     'FULL OUTER JOIN in SQL Server: both leftovers',
@@ -647,7 +647,7 @@ FROM Orders WITH (NOLOCK)
 WHERE order_date >= CAST(GETDATE() AS date);`)}
 <p>Someone put it on because a report blocked a checkout, or the other way round. The fix is usually a better index or a replica, not dirty reads on finance numbers.</p>
 <div class="mistake"><b>NOLOCK on a total you will send</b>
-<p>If James will stand up the number, wait for the committed rows.</p></div>`),
+<p>If Harvey will stand up the number, wait for the committed rows.</p></div>`),
 
   r('iif', 'IIF', 17,
     'IIF in SQL Server: a short CASE',

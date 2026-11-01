@@ -1,4 +1,4 @@
-// "James is still waiting." One email when someone has gone quiet and a ticket is still open for them.
+// "Harvey is still waiting." One email when someone has gone quiet and a ticket is still open for them.
 // Subscribers live in ./data/nudges.json until there are real accounts.
 const fs = require('node:fs');
 const path = require('node:path');

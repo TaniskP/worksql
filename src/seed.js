@@ -18,7 +18,7 @@ const COMPANIES = ['Brightside Dental', 'Kiln Studio', 'Northgate Lettings', 'Pe
 const STAFF = [
   // staff_id, first, last, role, team, start date, manager
   [11, 'Sandra', 'Okafor', 'Managing Director', 'Leadership', '2012-05-08', null],
-  [1, 'James', 'Rowe', 'Sales Manager', 'Sales', '2016-03-14', 11],
+  [1, 'Harvey', 'Rowe', 'Sales Manager', 'Sales', '2016-03-14', 11],
   [2, 'Nadia', 'Hassan', 'Account Exec', 'Sales', '2018-09-03', 1],
   [3, 'Chris', 'Upton', 'Account Exec', 'Sales', '2021-01-11', 1],
   [4, 'Ffion', 'Jones', 'Account Exec', 'Sales', '2019-06-24', 1],

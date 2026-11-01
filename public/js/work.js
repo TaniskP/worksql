@@ -79,7 +79,7 @@ $('ci-form').addEventListener('submit', (e) => {
   clockIn(active ? DAYS.find((d) => d.id === Number(active.dataset.day)) : DAYS[0]);
 });
 
-// Monday in work mode opens with James and the date filter (the mistake everyone makes once),
+// Monday in work mode opens with Harvey and the date filter (the mistake everyone makes once),
 // then Tom's register. The rest follow the lesson order.
 const MONDAY_LEADS = [5, 2];
 
@@ -413,7 +413,7 @@ async function send(l) {
   tab.checking = null;
   const v = res.verdict || { pass: false, headline: res.error || 'Something went wrong.', detail: '' };
 
-  // Wrong: the senior DBA holds it back, with a short note, before James ever sees it.
+  // Wrong: the senior DBA holds it back, with a short note, before Harvey ever sees it.
   if (!v.pass) {
     tab.note = { kind: 'bad', who: R, text: `Held back. ${v.headline}${v.detail ? ` ${v.detail}` : ''}` };
     renderCoach();
@@ -884,4 +884,10 @@ function celebrate(text) {
 
 $('t-tour').addEventListener('click', startTour);
 
-renderClockIn();
+// Homepage Clock in free skips the arrival screen; /work from the header still shows it.
+if (new URLSearchParams(location.search).has('go')) {
+  const pick = DAYS.find((d) => dayTickets(d).some((l) => !closed(l) && unlocked(l))) || DAYS[0];
+  clockIn(pick);
+} else {
+  renderClockIn();
+}

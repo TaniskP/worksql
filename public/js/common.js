@@ -123,7 +123,7 @@ export function renderPlans(container, plans, paymentsLive) {
     const per = p.interval ? `<small> / ${p.interval}</small>` : '';
     const badge = p.recommended ? '<span class="badge">Best value</span>' : '';
     let action;
-    if (p.id === 'free') action = `<a class="btn btn-ghost" href="/lessons">${paid === 'free' ? 'Start free' : 'Go to lessons'}</a>`;
+    if (p.id === 'free') action = `<a class="btn btn-ghost" href="/lessons">${paid === 'free' ? 'Guided lessons' : 'Go to lessons'}</a>`;
     else if (paid === p.id) action = '<span class="btn btn-ghost" aria-disabled="true">Your plan</span>';
     else if (paymentsLive) action = `<button class="btn ${p.recommended ? 'btn-primary' : 'btn-ghost'}" data-plan="${p.id}">${esc(p.cta)}</button>`;
     else action = '<p class="not-on-sale">Not on sale yet. Checkout opens soon.</p>';
