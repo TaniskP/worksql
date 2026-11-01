@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>WorkSQL - Clock in. The inbox is waiting.</title>
-  <meta name="description" content="Practise SQL Server through realistic requests from colleagues. Read the email, write the query and get feedback on your result.">
+  <title>WorkSQL - Practise SQL the way work asks for it</title>
+  <meta name="description" content="Practise SQL Server through realistic data requests from colleagues. Read the email, write the T-SQL, get feedback. 10 free tickets, no sign-up.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cellipse cx='16' cy='7' rx='11' ry='4' fill='%231f5eff'/%3E%3Cpath d='M5 7v18c0 2.2 4.9 4 11 4s11-1.8 11-4V7c0 2.2-4.9 4-11 4S5 9.2 5 7Z' fill='%231f5eff' opacity='.75'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
@@ -51,27 +51,18 @@
       </nav>
     </header>
 
+    <!-- One composition: headline, one sentence, one action. Everything else lives further down. -->
     <div class="hero-body">
-      <div class="hero-eyebrow"><span class="dot"></span> Harbour &amp; Co · <span id="hero-clock">09:14</span> · 1 new message</div>
-      <h1>Clock in.<span class="blue">Harvey needs last week’s</span><span class="blue">orders by ten.</span></h1>
-      <p class="lead">Practise SQL Server through realistic requests from colleagues. Read the email, write the query and get feedback on your result—one short workplace task at a time.</p>
-      <div class="hero-ctas">
-        <a href="/work?go=1" class="btn btn-primary btn-lg" data-clockin>Clock in free <span data-icon="arrow"></span></a>
-        <a href="/lessons" class="btn btn-ghost btn-lg">Guided lessons</a>
-      </div>
+      <h1>Practise SQL the way work asks for it.</h1>
+      <p class="lead">Practise realistic data requests from colleagues. Read the email, write the query, get feedback: one short workplace task at a time.</p>
+      <a href="/work?go=1" class="btn btn-primary btn-lg hero-go" data-clockin>Clock in free <span data-icon="arrow"></span></a>
       <div class="hero-offer">10 free tickets · No sign-up · Start any day</div>
-
-      <div class="hero-points">
-        <div><span data-icon="bolt"></span>You type,<br>every ticket</div>
-        <div><span data-icon="table"></span>Real T-SQL in<br>a query window</div>
-        <div><span data-icon="badge"></span>Marked like your<br>manager would</div>
-      </div>
+      <a href="/lessons" class="hero-quiet">or start with guided lessons</a>
     </div>
   </section>
 
   <section class="section" id="shift">
     <div class="section-head">
-      <div class="eyebrow">How a shift works</div>
       <h2>One ticket, start to finish.</h2>
       <p>Read the request. Write the query. Check your result. Send the reply.</p>
     </div>
@@ -98,6 +89,27 @@
     <div class="card" style="padding:8px">
       <ul class="lesson-list" id="preview-list" style="border:0"></ul>
     </div>
+  </section>
+
+  <!-- For search and for skimmers who haven't clocked in yet: plain prose, not another card grid. -->
+  <section class="section seo-prose" id="practise">
+    <h2>Practising SQL Server for the requests you actually get</h2>
+    <p>Most SQL courses teach syntax one keyword at a time. Work doesn’t arrive like that. It arrives as a message from someone who needs a number before a meeting: last week’s orders over £50, customers who haven’t bought anything, revenue by month for the finance pack. The hard part is rarely remembering what <code>GROUP BY</code> does. It’s turning a vague request into the right columns, the right rows and the right date range, then trusting the answer enough to send it. WorkSQL is practice for exactly that.</p>
+
+    <h3>What a ticket is</h3>
+    <p>A ticket is a short email from a colleague at Harbour &amp; Co, a made-up company with the tables you’d find in most small businesses: Customers, Orders, OrderLines, Products, Returns and Staff. You read the request, open a query window, write T-SQL and run it against a real database. When you send the result, it’s checked against a known right answer. The marking is strict on purpose: <code>SELECT *</code>, an extra column, a wrongly named header or a missing <code>ORDER BY</code> all get sent back with a short note explaining why, the way a senior colleague would. Each ticket takes about five minutes, and there are 46 of them spread across seven simulated workdays.</p>
+
+    <h3>The problems that come up at the desk</h3>
+    <p><b>Dates.</b> “Last week” and “the last 7 days” aren’t the same thing, and “not including today” trips people up constantly. You’ll practise building ranges with <a href="/tsql/getdate">GETDATE</a>, <a href="/tsql/dateadd">DATEADD</a> and <code>CAST(… AS date)</code> that stop at midnight instead of leaking this morning’s orders into the report. The <a href="/guides/last-week-orders">last week’s orders guide</a> walks through the common versions.</p>
+    <p><b>Joins.</b> The two classic mistakes are losing rows and multiplying them. An inner join quietly drops customers who never ordered; a <a href="/tsql/left-join-is-null">LEFT JOIN with IS NULL</a> finds them. Joining Orders to OrderLines and then summing the order total counts each order once per line, which is why a <a href="/guides/join-doubled-my-totals">JOIN can double your totals</a>.</p>
+    <p><b>Totals.</b> Grouping is where SQL Server is strictest. Every column that isn’t inside an aggregate has to be in <code>GROUP BY</code>, or you get <a href="/tsql/invalid-in-the-select-list">error 8120</a>. Filtering on a total belongs in <code>HAVING</code>, not <code>WHERE</code>, which the <a href="/guides/where-vs-having">WHERE vs HAVING guide</a> explains.</p>
+    <p><b>Reports.</b> Later tickets cover the queries that end up on slides: <a href="/tsql/case-when">CASE</a> to label orders into bands, <a href="/tsql/group-by-month">grouping by month</a>, CTEs to keep long queries readable, and <a href="/tsql/row-number">ROW_NUMBER</a> to pick each customer’s latest order.</p>
+
+    <h3>Who it’s for</h3>
+    <p>Analysts and new starters who already use SQL Server Management Studio but feel slow with it. People moving from Excel, where a VLOOKUP becomes a JOIN and a pivot table becomes a GROUP BY: the <a href="/convert">Excel to SQL converters</a> show the equivalents one function at a time. And anyone preparing for a data interview, where questions like top N per group, running totals and duplicates come up again and again: the <a href="/interview">interview practice page</a> has those with a T-SQL editor.</p>
+
+    <h3>Free to start, and free tools alongside</h3>
+    <p>The first ten tickets are free, with no sign-up: clock in and the first request is waiting. If you only need to get something done, the <a href="/tools">free T-SQL tools</a> run in the browser (a formatter, a DATEADD helper, a CASE builder, mock INSERTs and more), the <a href="/guides">guides</a> answer the questions people search for at work, and the <a href="/tsql">T-SQL reference</a> covers the functions you’ll use most.</p>
   </section>
 
   <section class="section band" id="guides">
@@ -256,6 +268,7 @@
     // Work mode needs a laptop-sized screen. On a phone, the door leads to the lessons instead.
     if (matchMedia('(max-width: 960px)').matches) {
       document.querySelectorAll('[data-clockin]').forEach((a) => { a.href = '/lessons'; a.firstChild.textContent = a.closest('nav') ? 'Start free ' : 'Start free '; });
+      document.querySelector('.hero-quiet')?.remove(); // the main button already leads to the lessons here
     }
 
     fetch('/api/lessons').then((r) => r.json()).then(({ days, lessons }) => {
