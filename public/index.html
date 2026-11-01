@@ -88,7 +88,7 @@
   <section class="section split">
     <div>
       <div class="eyebrow">A working week, not a syllabus</div>
-      <h2 id="week-title">Monday’s free. Tuesday’s inbox: 6 tickets.</h2>
+      <h2 id="week-title">Monday is free. The rest of the week is the real inbox.</h2>
       <p style="color:var(--ink-2);font-size:17px;margin:14px 0 0" id="week-blurb">Seven working days of about six tickets each. A walkthrough the first time you meet CASE, LEFT JOIN or a CTE, then two reps on your own. Five minutes a ticket is a month of days.</p>
       <div class="hero-ctas" style="margin-top:28px">
         <a href="/work" class="btn btn-primary btn-lg" data-clockin>Clock in free <span data-icon="arrow"></span></a>
@@ -97,18 +97,6 @@
     </div>
     <div class="card" style="padding:8px">
       <ul class="lesson-list" id="preview-list" style="border:0"></ul>
-    </div>
-  </section>
-
-  <section class="band" id="pricing">
-    <div class="section">
-      <div class="section-head">
-        <div class="eyebrow">Pricing</div>
-        <h2>Monday is free. Then it stops.</h2>
-        <p>Ten tickets to learn the loop. The rest of the week is the tickets people actually get. <a href="/pricing" style="color:var(--blue)">See every ticket by name</a>.</p>
-      </div>
-      <div class="plans" id="plans"></div>
-      <p class="pricing-note">Prices in GBP. Yearly works out at about £6.60 a month.</p>
     </div>
   </section>
 
@@ -140,7 +128,7 @@
   </footer>
 
   <script type="module">
-    import { icons, store, getPlans, renderPlans, esc } from '/js/common.js';
+    import { icons, esc } from '/js/common.js';
     document.querySelectorAll('[data-logo]').forEach((el) => el.insertAdjacentHTML('afterbegin', icons.logo));
     document.querySelectorAll('[data-icon]').forEach((el) => { el.outerHTML = icons[el.dataset.icon]; });
 
@@ -150,20 +138,16 @@
     }
     document.getElementById('hero-clock').textContent = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 
-    getPlans().then(({ plans, paymentsLive }) => renderPlans(document.getElementById('plans'), plans, paymentsLive));
-
-    // The week, as inboxes: what each day holds.
+    // The week, as inboxes: what each day holds. Locks live on /lessons and /pricing, not here.
     fetch('/api/lessons').then((r) => r.json()).then(({ days, lessons }) => {
-      const paid = store.isPaid();
       document.getElementById('week-blurb').textContent = `${days.length} working days of about six tickets each: ${lessons.length} in all. A walkthrough the first time you meet CASE, LEFT JOIN or a CTE, then two reps on your own. Five minutes a ticket is a month of days.`;
       document.getElementById('preview-list').innerHTML = days.map((d) => {
         const ls = lessons.filter((l) => l.day === d.id);
-        const lock = !ls[0].free && !paid;
-        return `<li><a class="lesson-row${lock ? ' locked' : ''}" href="${lock ? '/pricing' : '/lessons#day-' + d.id}">
-          <span class="state">${lock ? icons.lock : d.id}</span><span class="n"></span>
+        return `<li><a class="lesson-row" href="/lessons#day-${d.id}">
+          <span class="state">${d.id}</span><span class="n"></span>
           <span class="topic">W${d.week} ${esc(d.name)}</span>
           <span class="blurb">${ls.length} tickets · ${esc(d.title)}</span>
-          <span class="mins">${lock ? '<span class="paid-chip">Paid</span>' : '<span class="free-chip">Free</span>'}</span><span class="chev">${icons.chev}</span></a></li>`;
+          <span class="chev">${icons.chev}</span></a></li>`;
       }).join('') + `<li><a class="lesson-row" href="/lessons" style="color:var(--blue);font-weight:600;display:block">See all ${lessons.length} tickets by name</a></li>`;
     });
 

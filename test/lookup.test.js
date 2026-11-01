@@ -18,5 +18,7 @@ const home = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'),
 assert.ok(home.includes('one short job from a colleague'), 'hero glosses ticket at first mention');
 assert.ok(home.includes('ticket-what') && home.includes('What a ticket is worth'), 'how-a-shift explains ticket value');
 assert.ok(home.includes('id="find"') && home.includes('/api/lookup'), 'homepage find bar');
+assert.ok(!home.includes('Then it stops') && !home.includes('id="plans"'), 'homepage has no pricing wall');
+assert.ok(home.includes('href="/pricing"'), 'pricing stays in the nav');
 
 console.log(`lookup: ${items.length} items, homepage ticket + find ok`);
