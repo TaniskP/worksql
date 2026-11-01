@@ -1030,13 +1030,17 @@ body.guides-page .site-header { background: rgba(255, 255, 255, .88); backdrop-f
 .welcome-card h2 { font-size: 22px; margin-bottom: 6px; }
 .welcome-card p { color: var(--ink-2); margin: 0 0 14px; }
 /* ---------- homepage: long-form practice copy (below the fold, for search and skimmers) ---------- */
-.seo-prose { max-width: calc(760px + 2 * var(--gutter)); }
-.seo-prose h2 { margin-bottom: 18px; }
-.seo-prose h3 { font-size: 20px; margin: 34px 0 10px; }
-.seo-prose p { color: var(--ink-2); font-size: 16.5px; line-height: 1.7; margin: 0 0 14px; }
+.seo-prose .section-head { max-width: 760px; }
+.prose-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 36px 40px; }
+.prose-block { border-top: 2px solid var(--line); padding-top: 18px; }
+.prose-block h3 { font-size: 18px; margin: 0 0 8px; }
+.seo-prose p { color: var(--ink-2); font-size: 15.5px; line-height: 1.7; margin: 0; }
+.seo-prose .section-head p { font-size: 17px; margin-top: 14px; }
 .seo-prose a { color: var(--blue); text-decoration: underline; text-decoration-color: rgba(31, 94, 255, .35); text-underline-offset: 3px; }
 .seo-prose a:hover { text-decoration-color: currentColor; }
 .seo-prose code { font-family: var(--mono); font-size: .88em; background: #f1f4f9; padding: 1px 5px; border-radius: 4px; color: var(--ink); }
+@media (max-width: 980px) { .prose-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .prose-grid { grid-template-columns: 1fr; gap: 28px; } }
 /* ---------- cookie notice (first visit; same look as cvonpoint.com) ---------- */
 .cookie-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 90; background: #0e172a; color: #f0f1f5; border-top: 1px solid rgba(255,255,255,.1);
   box-shadow: 0 -10px 30px rgba(0,0,0,.18); font-family: Inter, 'Segoe UI', system-ui, sans-serif; transform: translateY(100%); opacity: 0; transition: transform .4s ease-out, opacity .4s ease-out; }

@@ -221,12 +221,40 @@
 
   <!-- For search and for skimmers who haven't clocked in yet: plain prose, not another card grid. -->
   <section class="section seo-prose" id="practise">
-    <h2>Practising SQL Server for the requests you actually get</h2>
-    <p>Work doesn’t arrive one keyword at a time. It arrives as a message from someone who needs a number before a meeting: last week’s orders over £50, customers who haven’t bought anything, revenue by month. The hard part is turning that into the right columns, rows and date range, then trusting the answer enough to send it.</p>
-    <p>Each ticket is a short email from a colleague at Harbour &amp; Co, a made-up company with Customers, Orders, OrderLines, Products, Returns and Staff. You write T-SQL against a real database and send the result, and it’s checked against a known right answer. Marking is strict: <code>SELECT *</code>, an extra column or a missing <code>ORDER BY</code> gets sent back with a short note. There are 46 tickets of about five minutes each across seven simulated workdays.</p>
-    <p>The tickets cover the problems that come up at the desk: date ranges that leak today’s orders (see <a href="/guides/last-week-orders">last week’s orders</a>), joins that lose rows or <a href="/guides/join-doubled-my-totals">double your totals</a>, <a href="/guides/where-vs-having">WHERE vs HAVING</a>, and report queries with <a href="/tsql/case-when">CASE</a> and <a href="/tsql/row-number">ROW_NUMBER</a>.</p>
-    <p>It’s for analysts and new starters who use SQL Server Management Studio but feel slow with it, people moving from Excel (the <a href="/convert">Excel to SQL converters</a> show VLOOKUP as a JOIN and pivots as GROUP BY), and anyone preparing for a data interview with the <a href="/interview">interview practice page</a>. If you just need to get something done, the <a href="/tools">free T-SQL tools</a> and <a href="/guides">guides</a> are open to everyone.</p>
+    <div class="section-head">
+      <div class="eyebrow">Why practise this way</div>
+      <h2>Practising SQL Server for the requests you actually get</h2>
+      <p>Work doesn’t arrive one keyword at a time. It arrives as a message from someone who needs a number before a meeting: last week’s orders over £50, customers who haven’t bought anything, revenue by month. The hard part is turning that into the right columns, rows and date range, then trusting the answer enough to send it. WorkSQL is practice for exactly that.</p>
+    </div>
+
+    <div class="prose-grid">
+      <div class="prose-block">
+        <h3>What a ticket is</h3>
+        <p>One short request from a colleague at Harbour &amp; Co, a made-up company with the tables most small businesses have: Customers, Orders, OrderLines, Products, Returns and Staff. You read the email, write T-SQL in a query window, run it against a real database and send the result back. Each one takes about five minutes.</p>
+      </div>
+      <div class="prose-block">
+        <h3>How it’s marked</h3>
+        <p>Every result is checked against a known right answer, and the marking is strict on purpose. <code>SELECT *</code>, an extra column, a wrongly named header, rows in the wrong order or a missing <code>ORDER BY</code> all get sent back with a short note from the senior DBA. Hints point at the mistake; they never paste the query.</p>
+      </div>
+      <div class="prose-block">
+        <h3>How the week is laid out</h3>
+        <p>46 tickets across seven simulated workdays, about six a day after Monday. The first time you meet something new, like <code>CASE</code>, <code>LEFT JOIN</code> or a CTE, it’s a step-by-step walkthrough; then two reps on your own. Monday’s ten tickets are free, with no sign-up.</p>
+      </div>
+      <div class="prose-block">
+        <h3>The problems that come up at the desk</h3>
+        <p>Date ranges that leak this morning’s orders (see <a href="/guides/last-week-orders">last week’s orders</a> and <a href="/tsql/getdate">GETDATE</a>). Joins that lose rows, or <a href="/guides/join-doubled-my-totals">double your totals</a>. <a href="/guides/where-vs-having">WHERE vs HAVING</a> and the <a href="/tsql/invalid-in-the-select-list">GROUP BY error</a>. Report queries with <a href="/tsql/case-when">CASE</a>, <a href="/tsql/group-by-month">month grouping</a> and <a href="/tsql/row-number">ROW_NUMBER</a>.</p>
+      </div>
+      <div class="prose-block">
+        <h3>Who it’s for</h3>
+        <p>Analysts and new starters who use SQL Server Management Studio but feel slow with it. People moving from Excel, where the <a href="/convert">Excel to SQL converters</a> show VLOOKUP as a JOIN and pivots as GROUP BY. And anyone preparing for a data interview, with top N per group, running totals and duplicates on the <a href="/interview">interview practice page</a>.</p>
+      </div>
+      <div class="prose-block">
+        <h3>Free to use alongside</h3>
+        <p>If you just need to get something done, the <a href="/tools">free T-SQL tools</a> run in your browser: a formatter, a DATEADD helper, a CASE builder, mock INSERTs and more. The <a href="/guides">guides</a> answer the questions people search for at work, and the <a href="/tsql">T-SQL reference</a> covers the functions you’ll use most.</p>
+      </div>
+    </div>
   </section>
+
 
   <section class="close-strip" id="start">
     <h2>Your first task is waiting.</h2>
