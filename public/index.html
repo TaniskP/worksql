@@ -100,23 +100,181 @@
     </div>
   </section>
 
-  <section class="section">
-    <div class="section-head">
-      <div class="eyebrow">Guides</div>
-      <h2>SQL Server the way work asks for it</h2>
-      <p>Last week, yesterday, SELECT *, a JOIN that doubled the total. Short pages you can send a colleague.</p>
+  <section class="section band" id="guides">
+    <div class="spot">
+      <header class="lib-head">
+        <h2>SQL Server, the way work asks for it.</h2>
+        <p>Short, practical pages for the queries on your desk.</p>
+      </header>
+      <form class="lib-search" role="search" action="/guides" method="get">
+        <label class="visually-hidden" for="guide-q">Search guides</label>
+        <input id="guide-q" name="q" type="search" placeholder="What are you trying to do in SQL?" autocomplete="off">
+        <button class="btn btn-primary" type="submit">Search guides</button>
+      </form>
+      <p class="spot-try">Try: <a href="/guides/last-week-orders">last week’s orders</a>, <a href="/guides/find-duplicate-customers">duplicate customers</a>, <a href="/guides?topic=Joins">JOINs</a></p>
+      <div class="lib-chips" id="spot-chips">
+        <button type="button" class="lib-chip" data-cat="" aria-pressed="true">All</button>
+        <button type="button" class="lib-chip" data-cat="Dates">Dates</button>
+        <button type="button" class="lib-chip" data-cat="Joins">Joins</button>
+        <button type="button" class="lib-chip" data-cat="Totals">Totals</button>
+        <button type="button" class="lib-chip" data-cat="Basics">Basics</button>
+        <button type="button" class="lib-chip" data-cat="Reporting">Reporting</button>
+        <a class="lib-chip" href="/guides/ssms-run-a-query">SSMS</a>
+      </div>
+      <div class="lib-meta">
+        <h3>Browse guides</h3>
+        <p class="guide-count" id="spot-count">6 to start</p>
+      </div>
+      <div class="spot-grid" id="spot-grid">
+        <a class="spot-card" href="/guides/last-week-orders" data-cat="Dates">
+          <div class="spot-vis vis-cal" aria-hidden="true">
+            <div class="vis-cal-head"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
+            <div class="vis-cal-days"><span></span><span></span><span></span><span></span><span></span><span></span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span class="on">8</span><span class="on">9</span><span class="on">10</span><span class="on">11</span><span class="on">12</span><span class="on">13</span><span class="on">14</span><span>15</span><span>16</span></div>
+          </div>
+          <span class="lib-cat">Dates</span>
+          <b>Last week’s orders</b>
+          <span class="lib-short">Monday–Sunday last week, not a rolling 7 days ending now.</span>
+        </a>
+        <a class="spot-card" href="/guides/join-doubled-my-totals" data-cat="Joins">
+          <div class="spot-vis vis-join" aria-hidden="true">
+            <div class="vis-tbl"><i>Orders</i><em></em><em></em><em></em></div>
+            <span></span>
+            <div class="vis-tbl"><i>Lines</i><em></em><em></em><em></em></div>
+          </div>
+          <span class="lib-cat">Joins</span>
+          <b>JOIN doubled my totals</b>
+          <span class="lib-short">One order, many lines. SUM after the join is wrong.</span>
+        </a>
+        <a class="spot-card" href="/guides/why-select-star-fails" data-cat="Basics">
+          <div class="spot-vis vis-code" aria-hidden="true">
+            <code><s>SELECT * FROM Orders</s></code>
+            <code>SELECT order_id, order_date, total_amount</code>
+          </div>
+          <span class="lib-cat">Basics</span>
+          <b>Why SELECT * fails</b>
+          <span class="lib-short">Extra columns break the paste. Name what they asked for.</span>
+        </a>
+        <a class="spot-card" href="/guides/where-vs-having" data-cat="Totals">
+          <div class="spot-vis vis-split" aria-hidden="true">
+            <div><i>WHERE</i><em>rows first</em></div>
+            <div><i>HAVING</i><em>totals after</em></div>
+          </div>
+          <span class="lib-cat">Totals</span>
+          <b>WHERE vs HAVING</b>
+          <span class="lib-short">WHERE is before the group. HAVING is after the total.</span>
+        </a>
+        <a class="spot-card" href="/guides/find-duplicate-customers" data-cat="Totals">
+          <div class="spot-vis vis-dup" aria-hidden="true">
+            <div><b>email</b></div>
+            <div>amy@harbour.co</div>
+            <div class="hit">sam@harbour.co</div>
+            <div class="hit">sam@harbour.co</div>
+          </div>
+          <span class="lib-cat">Data</span>
+          <b>Find duplicate customers</b>
+          <span class="lib-short">Same email twice. GROUP BY and HAVING.</span>
+        </a>
+        <a class="spot-card" href="/guides/cte-for-reports" data-cat="Reporting">
+          <div class="spot-vis vis-code" aria-hidden="true">
+            <code>WITH sold AS (</code>
+            <code>  SELECT product_id, SUM(qty)</code>
+            <code>  FROM OrderLines</code>
+            <code>)</code>
+          </div>
+          <span class="lib-cat">Reporting</span>
+          <b>CTEs for reports</b>
+          <span class="lib-short">WITH name AS (…): write the query in the order you think.</span>
+        </a>
+      </div>
+      <p class="spot-more"><a class="btn btn-ghost btn-lg" href="/guides">View all guides</a></p>
+      <p class="pricing-note"><a href="/tools">Free T-SQL tools</a> · <a href="/convert">Excel / Pandas / dialects</a> · <a href="/interview">Interview sandbox</a></p>
     </div>
-    <div class="ref-links" id="guide-links"></div>
-    <p class="pricing-note"><a href="/guides">All workplace guides</a> · <a href="/tools">Free T-SQL tools</a> · <a href="/convert">Excel / Pandas / dialects</a> · <a href="/interview">Interview sandbox</a></p>
   </section>
 
-  <section class="section band">
-    <div class="section-head">
-      <div class="eyebrow">T-SQL reference</div>
-      <h2>Looking something up?</h2>
-      <p>Short pages on the SQL Server functions people search for at work, each with a ticket to try it on.</p>
+  <section class="section" id="tsql">
+    <div class="spot">
+      <header class="lib-head">
+        <h2>Looking something up?</h2>
+        <p>The SQL Server functions people search for at work, each with a ticket to try it on.</p>
+      </header>
+      <form class="lib-search" role="search" action="/tsql" method="get">
+        <label class="visually-hidden" for="ref-q">Search T-SQL</label>
+        <input id="ref-q" name="q" type="search" placeholder="GETDATE, ISNULL, ROW_NUMBER…" autocomplete="off">
+        <button class="btn btn-primary" type="submit">Search T-SQL</button>
+      </form>
+      <p class="spot-try">Try: <a href="/tsql/getdate">GETDATE</a>, <a href="/tsql/case-when">CASE</a>, <a href="/tsql/row-number">ROW_NUMBER</a></p>
+      <div class="lib-chips" id="ref-chips">
+        <button type="button" class="lib-chip" data-cat="" aria-pressed="true">All</button>
+        <button type="button" class="lib-chip" data-cat="Dates">Dates</button>
+        <button type="button" class="lib-chip" data-cat="Types">Types</button>
+        <button type="button" class="lib-chip" data-cat="Totals">Totals</button>
+        <button type="button" class="lib-chip" data-cat="Window">Window</button>
+        <a class="lib-chip" href="/tsql?q=JOIN">Joins</a>
+      </div>
+      <div class="lib-meta">
+        <h3>Browse T-SQL</h3>
+        <p class="guide-count" id="ref-count">6 to start</p>
+      </div>
+      <div class="spot-grid" id="ref-grid">
+        <a class="spot-card" href="/tsql/getdate" data-cat="Dates">
+          <div class="spot-vis vis-code" aria-hidden="true">
+            <code>CAST(GETDATE() AS date)</code>
+            <code>DATEADD(day, -7, today)</code>
+          </div>
+          <span class="lib-cat">Dates</span>
+          <b>GETDATE()</b>
+          <span class="lib-short">Today, yesterday, last week. And why “last 7 days” keeps including today.</span>
+        </a>
+        <a class="spot-card" href="/tsql/dateadd" data-cat="Dates">
+          <div class="spot-vis vis-code" aria-hidden="true">
+            <code>DATEADD(day, -7, GETDATE())</code>
+            <code>DATEADD(month, 1, start_date)</code>
+          </div>
+          <span class="lib-cat">Dates</span>
+          <b>DATEADD</b>
+          <span class="lib-short">Move a date backwards or forwards by any unit.</span>
+        </a>
+        <a class="spot-card" href="/tsql/isnull" data-cat="Types">
+          <div class="spot-vis vis-split" aria-hidden="true">
+            <div><i>NULL</i><em>unknown</em></div>
+            <div><i>ISNULL</i><em>No phone</em></div>
+          </div>
+          <span class="lib-cat">Types</span>
+          <b>ISNULL</b>
+          <span class="lib-short">Swap NULL for a word or a zero. ISNULL or COALESCE?</span>
+        </a>
+        <a class="spot-card" href="/tsql/top" data-cat="Totals">
+          <div class="spot-vis vis-code" aria-hidden="true">
+            <code>SELECT TOP 5 order_id, total_amount</code>
+            <code>FROM Orders</code>
+            <code>ORDER BY total_amount DESC</code>
+          </div>
+          <span class="lib-cat">Totals</span>
+          <b>TOP</b>
+          <span class="lib-short">The first N rows. Meaningless without ORDER BY.</span>
+        </a>
+        <a class="spot-card" href="/tsql/case-when" data-cat="Totals">
+          <div class="spot-vis vis-split" aria-hidden="true">
+            <div><i>WHEN</i><em>&lt; 50 Small</em></div>
+            <div><i>ELSE</i><em>Medium</em></div>
+          </div>
+          <span class="lib-cat">Totals</span>
+          <b>CASE WHEN</b>
+          <span class="lib-short">Small, Medium, Large. If-then-else inside a query.</span>
+        </a>
+        <a class="spot-card" href="/tsql/row-number" data-cat="Window">
+          <div class="spot-vis vis-code" aria-hidden="true">
+            <code>ROW_NUMBER() OVER (</code>
+            <code>  PARTITION BY customer_id</code>
+            <code>  ORDER BY order_date DESC)</code>
+          </div>
+          <span class="lib-cat">Window</span>
+          <b>ROW_NUMBER</b>
+          <span class="lib-short">Latest order per customer, the whole row.</span>
+        </a>
+      </div>
+      <p class="spot-more"><a class="btn btn-ghost btn-lg" href="/tsql">View all T-SQL pages</a></p>
     </div>
-    <div class="ref-links" id="ref-links"></div>
   </section>
 
   <footer class="footer">
@@ -151,11 +309,26 @@
       }).join('') + `<li><a class="lesson-row" href="/lessons" style="color:var(--blue);font-weight:600;display:block">See all ${lessons.length} tickets by name</a></li>`;
     });
 
-    fetch('/api/articles').then((r) => r.json()).then(({ articles }) => {
-      const card = (a) => `<a class="ref-link" href="${esc(a.href)}"><b>${esc(a.name)}</b><span>${esc(a.short)}</span></a>`;
-      document.getElementById('guide-links').innerHTML = articles.filter((a) => a.kind === 'guide').map(card).join('');
-      document.getElementById('ref-links').innerHTML = articles.filter((a) => a.kind !== 'guide').map(card).join('');
-    });
+    const bindSpot = (chipsId, gridId, countId) => {
+      const chips = document.getElementById(chipsId);
+      const cards = [...document.querySelectorAll(`#${gridId} .spot-card`)];
+      const count = document.getElementById(countId);
+      chips.addEventListener('click', (e) => {
+        const b = e.target.closest('.lib-chip');
+        if (!b || b.tagName === 'A') return;
+        for (const x of chips.querySelectorAll('button.lib-chip')) x.setAttribute('aria-pressed', x === b ? 'true' : 'false');
+        const cat = b.getAttribute('data-cat') || '';
+        let n = 0;
+        for (const el of cards) {
+          const on = !cat || el.getAttribute('data-cat') === cat;
+          el.hidden = !on;
+          if (on) n++;
+        }
+        count.textContent = cat ? n + ' of 6' : '6 to start';
+      });
+    };
+    bindSpot('spot-chips', 'spot-grid', 'spot-count');
+    bindSpot('ref-chips', 'ref-grid', 'ref-count');
 
     const find = document.getElementById('find');
     const drop = document.getElementById('find-drop');

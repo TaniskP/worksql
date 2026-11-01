@@ -18,6 +18,8 @@ const home = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'),
 assert.ok(home.includes('one short job from a colleague'), 'hero glosses ticket at first mention');
 assert.ok(home.includes('ticket-what') && home.includes('What a ticket is worth'), 'how-a-shift explains ticket value');
 assert.ok(home.includes('id="find"') && home.includes('/api/lookup'), 'homepage find bar');
+assert.ok(home.includes('spot-grid') && home.includes('/guides/last-week-orders') && !home.includes('id="guide-links"'), 'homepage featured guides');
+assert.ok(home.includes('id="ref-grid"') && home.includes('/tsql/getdate') && !home.includes('id="ref-links"'), 'homepage featured T-SQL');
 assert.ok(!home.includes('Then it stops') && !home.includes('id="plans"'), 'homepage has no pricing wall');
 assert.ok(home.includes('href="/pricing"'), 'pricing stays in the nav');
 
