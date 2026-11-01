@@ -4,7 +4,20 @@
 const { esc, sql, c } = require('./article-html');
 const extra = require('./topics');
 const { navInner } = require('./nav');
-const { catalogSearch, searchBits } = require('./search');
+const { catalogSearch, searchBits, catalogCard } = require('./search');
+
+const TOPIC_ORDER = ['At work', 'Joins', 'Dates', 'Window', 'Aggregates', 'Types', 'Functions'];
+
+function topicOf(a) {
+  const s = `${a.slug} ${a.name}`.toLowerCase();
+  if (/join|doubled/.test(s)) return 'Joins';
+  if (/getdate|dateadd|datediff|yesterday|last-week|between|datetime|eomonth|datepart|format date|date vs/.test(s)) return 'Dates';
+  if (/row-number|rank|lag|running|offset/.test(s)) return 'Window';
+  if (/varchar|nvarchar|int-decimal|decimal|money|\bbit\b|uniqueidentifier|cast|try_cast|null vs|collation/.test(s)) return 'Types';
+  if (/group|having|count|sum|avg|distinct/.test(s)) return 'Aggregates';
+  if (a.kind === 'guide') return 'At work';
+  return 'Functions';
+}
 
 const core = [
   {
@@ -600,7 +613,7 @@ const isGuide = (a) => a.kind === 'guide';
 const pathOf = (a) => isGuide(a) ? `/guides/${a.slug}` : `/tsql/${a.slug}`;
 const hubOf = (a) => isGuide(a) ? { href: '/guides', label: 'Guides' } : { href: '/tsql', label: 'T-SQL reference' };
 
-function page({ title, description, body, canonical }) {
+function page({ title, description, body, canonical, shell }) {
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -617,7 +630,7 @@ function page({ title, description, body, canonical }) {
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
   <link rel="stylesheet" href="/css/app.css">
 </head>
-<body>
+<body${shell === 'catalog' ? ' class="catalog"' : ''}>
   <header class="site-header" style="border-bottom:1px solid var(--line)">
     <nav class="nav">
       <a href="/" class="logo"><svg viewBox="0 0 32 32" fill="none" width="26" height="26"><ellipse cx="16" cy="7" rx="11" ry="4" fill="#1f5eff"/><path d="M5 7v18c0 2.2 4.9 4 11 4s11-1.8 11-4V7c0 2.2-4.9 4-11 4S5 9.2 5 7Z" fill="#1f5eff" opacity=".75"/></svg>WorkSQL</a>
@@ -679,19 +692,20 @@ function renderIndex(origin) {
 }
 
 function renderGuides(origin) {
-  const card = (a) => `<a class="ref-link" href="${pathOf(a)}" data-search="${searchBits(a.name + ' ' + a.title + ' ' + a.short + ' ' + a.slug)}"><b>${esc(a.name)}</b><span>${esc(a.short)}</span></a>`;
-  const guides = articles.filter(isGuide);
-  const refs = articles.filter((a) => !isGuide(a));
-  const body = `<article class="article">
-    <h1>SQL Server guides</h1>
-    <p class="lede">Joins, dates, types, and the tickets people get at work. Search, or scroll. Each page has a worked example in plain English. Free in-browser <a href="/tools">T-SQL tools</a> sit next door — formatter, schema diagrams, CASE, PIVOT, IN-list.</p>
-    ${catalogSearch({ placeholder: 'LEFT JOIN, age, CAST, yesterday…', total: articles.length, noun: 'pages' })}
-    <h2>At work</h2>
-    <div class="ref-links" id="guides">${guides.map(card).join('')}</div>
-    <h2>Functions and types</h2>
-    <div class="ref-links" id="refs">${refs.map(card).join('')}</div>
-  </article>`;
-  return page({ title: 'SQL Server guides for work | WorkSQL', description: 'Searchable SQL Server guides: LEFT JOIN, RIGHT JOIN, age from a date, CAST, GROUP BY, and the workplace queries people actually send.', body, canonical: origin && `${origin}/guides` });
+  const used = new Set(articles.map(topicOf));
+  const chips = ['All', ...TOPIC_ORDER.filter((t) => used.has(t))];
+  const cards = articles.slice().sort((a, b) => TOPIC_ORDER.indexOf(topicOf(a)) - TOPIC_ORDER.indexOf(topicOf(b))).map((a) => catalogCard({
+    href: pathOf(a), name: a.name, short: a.short, extra: a.title + ' ' + a.slug, cat: topicOf(a),
+  })).join('');
+  const body = `<div class="lib">
+    <header class="lib-head">
+      <h1>Guides</h1>
+      <p>Workplace SQL Server pages. Search a function, or pick a topic.</p>
+    </header>
+    ${catalogSearch({ placeholder: 'LEFT JOIN, yesterday, CAST, ROW_NUMBER…', total: articles.length, noun: 'guides', variant: 'lib', chips })}
+    <div class="lib-grid" id="guides">${cards}</div>
+  </div>`;
+  return page({ title: 'SQL Server guides for work | WorkSQL', description: 'Searchable SQL Server guides: LEFT JOIN, RIGHT JOIN, age from a date, CAST, GROUP BY, and the workplace queries people actually send.', body, canonical: origin && `${origin}/guides`, shell: 'catalog' });
 }
 
 function sitemapPaths() {

@@ -5,7 +5,7 @@ const { esc } = require('./article-html');
 
 const extraTools = require('./tools-more');
 const enterpriseTools = require('./tools-enterprise');
-const { catalogSearch, searchBits } = require('./search');
+const { catalogSearch, catalogCard } = require('./search');
 
 const coreTools = [
   {
@@ -139,30 +139,29 @@ function renderTools(origin) {
     const g = t.group || 'Everyday';
     if (!groups.includes(g)) groups.push(g);
   }
-  const card = (href, name, short, extra) => `<a class="ref-link" href="${href}" data-search="${searchBits(name + ' ' + short + ' ' + extra)}"><b>${esc(name)}</b><span>${esc(short)}</span></a>`;
-  const cards = (g) => tools.filter((t) => (t.group || 'Everyday') === g).map((t) => card(`/tools/${t.slug}`, t.name, t.short, t.slug + ' ' + (t.group || '') + ' ' + t.title)).join('');
-  const hubs = 4;
-  const total = tools.length + hubs;
-  const body = `<article class="article">
-    <div class="crumb"><a href="/guides">Guides</a> › Tools</div>
-    <h1>Free T-SQL tools</h1>
-    <p class="lede">${tools.length} in-browser utilities, plus Excel / Pandas / dialect hubs and an interview sandbox. Nothing is uploaded.</p>
-    ${catalogSearch({ placeholder: 'Formatter, VLOOKUP, SARGable, MERGE, RLS…', total, noun: 'tools' })}
-    <h2>Comparison hubs</h2>
-    <div class="ref-links">
-      ${card('/excel-to-sql', 'Excel → T-SQL', 'VLOOKUP, IF, COUNTIF, SUMPRODUCT. One page per function.', 'excel convert')}
-      ${card('/pandas-to-sql', 'Pandas → T-SQL', 'merge, groupby, fillna, drop_duplicates, loc.', 'pandas convert')}
-      ${card('/sql-translator', 'SQL dialect translator', 'MySQL, Postgres, Oracle, Snowflake → SQL Server.', 'mysql limit dialect')}
-      ${card('/interview', 'Interview sandbox', 'Top N per group, running totals, anti-joins. Draft and reveal.', 'interview sql')}
-    </div>
-    ${groups.map((g) => `<h2>${esc(g)}</h2><div class="ref-links">${cards(g)}</div>`).join('')}
-    <section class="try">
-      <h2>Then write it on a ticket</h2>
-      <p>Monday is free. A colleague asks, you type, we mark it.</p>
-      <a class="btn btn-primary" href="/work">Clock in free</a>
-    </section>
-  </article>`;
-  return page({ title: 'Free T-SQL tools for SQL Server | WorkSQL', description: 'Free in-browser T-SQL tools: formatter, DATEADD, mock INSERTs, schema diagrams, CASE builder, PIVOT, SARGable rewrite, RLS drafts, Excel-to-SQL, IN-list builder.', body, canonical: origin && `${origin}/tools` });
+  const hubs = [
+    { href: '/excel-to-sql', name: 'Excel → T-SQL', short: 'VLOOKUP, IF, COUNTIF, SUMPRODUCT. One page per function.', extra: 'excel convert' },
+    { href: '/pandas-to-sql', name: 'Pandas → T-SQL', short: 'merge, groupby, fillna, drop_duplicates, loc.', extra: 'pandas convert' },
+    { href: '/sql-translator', name: 'SQL dialect translator', short: 'MySQL, Postgres, Oracle, Snowflake → SQL Server.', extra: 'mysql limit dialect' },
+    { href: '/interview', name: 'Interview sandbox', short: 'Top N per group, running totals, anti-joins. Draft and reveal.', extra: 'interview sql' },
+  ];
+  const cards = [
+    ...hubs.map((h) => catalogCard({ ...h, cat: 'Hubs' })),
+    ...tools.map((t) => catalogCard({
+      href: `/tools/${t.slug}`, name: t.name, short: t.short, extra: t.slug + ' ' + (t.group || '') + ' ' + t.title, cat: t.group || 'Everyday',
+    })),
+  ].join('');
+  const total = tools.length + hubs.length;
+  const chips = ['All', 'Hubs', ...groups];
+  const body = `<div class="lib">
+    <header class="lib-head">
+      <h1>Free tools</h1>
+      <p>${tools.length} in-browser utilities, plus converters and an interview sandbox. Nothing is uploaded.</p>
+    </header>
+    ${catalogSearch({ placeholder: 'Formatter, VLOOKUP, SARGable, MERGE, RLS…', total, noun: 'tools', variant: 'lib', chips })}
+    <div class="lib-grid">${cards}</div>
+  </div>`;
+  return page({ title: 'Free T-SQL tools for SQL Server | WorkSQL', description: 'Free in-browser T-SQL tools: formatter, DATEADD, mock INSERTs, schema diagrams, CASE builder, PIVOT, SARGable rewrite, RLS drafts, Excel-to-SQL, IN-list builder.', body, canonical: origin && `${origin}/tools`, shell: 'catalog' });
 }
 
 function renderTool(tool, origin) {
