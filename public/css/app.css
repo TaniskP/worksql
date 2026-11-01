@@ -1066,3 +1066,6 @@ body.guides-page .site-header { background: rgba(255, 255, 255, .88); backdrop-f
 }
 /* Privacy, support and terms: the same reading column, centred on the page. */
 .article.legal { max-width: calc(760px + 2 * var(--gutter)); margin: 0 auto; }
+
+/* Under the offer: what "ticket" means, for people who've never heard it used this way. */
+.hero-note { margin: 6px 0 0; max-width: 34em; font-size: 13px; line-height: 1.5; color: var(--muted); }
