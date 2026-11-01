@@ -23,6 +23,8 @@ assert.ok(paths.includes('/sql-translator/snowflake-to-tsql'));
 assert.ok(paths.includes('/interview/top-n-per-group'));
 const index = renderConvert('https://worksql.com');
 assert.ok(index.includes('rel="canonical" href="https://worksql.com/convert"'));
+assert.ok(index.includes('g-hero') && index.includes('excel_logo.png') && index.includes('python_logo.png'));
+assert.ok(index.includes('VLOOKUP') && index.includes('merge') && index.includes('MySQL'));
 for (const p of paths) {
   const html = matchHub(p, 'https://worksql.com');
   assert.ok(html && html.includes('Clock in free'), p);

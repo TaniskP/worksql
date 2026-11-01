@@ -1,12 +1,32 @@
 // T-SQL reference pages: the things people type into Google at work, answered properly,
 // each ending in a ticket to try it on. Rendered on the server so search engines can read them.
 
-const { esc, sql, c } = require('./article-html');
+const { esc, sql, c, crumbBack } = require('./article-html');
 const extra = require('./topics');
 const { navInner, footerInner } = require('./nav');
-const { catalogSearch, searchBits, catalogCard } = require('./search');
+const { catalogSearch, searchBits, catalogCard, catalogIcon } = require('./search');
 
 const TOPIC_ORDER = ['At work', 'Joins', 'Dates', 'Window', 'Aggregates', 'Types', 'Functions'];
+
+const TOPIC_BLURB = {
+  'At work': 'Tickets from the desk: dates, JOINs that double a total, CTEs for a slide.',
+  Joins: 'INNER, LEFT, RIGHT, FULL OUTER, CROSS APPLY — and the ON vs WHERE trap.',
+  Dates: 'GETDATE, DATEADD, DATEDIFF, yesterday, last week, EOMONTH.',
+  Window: 'ROW_NUMBER, RANK, LAG, LEAD, running totals.',
+  Aggregates: 'GROUP BY, HAVING, COUNT DISTINCT, monthly totals.',
+  Types: 'varchar vs nvarchar, CAST, TRY_CAST, NULL vs blank.',
+  Functions: 'ISNULL, CASE, TRIM, and the everyday SQL Server helpers.',
+};
+
+const TOPIC_FEATURED = {
+  'At work': ['why-select-star-fails', 'find-duplicate-customers', 'cte-for-reports'],
+  Joins: ['left-join-is-null', 'join-doubled-my-totals', 'full-outer-join'],
+  Dates: ['getdate', 'dateadd', 'last-week-orders'],
+  Window: ['row-number', 'running-total', 'lag'],
+  Aggregates: ['group-by-month', 'where-vs-having', 'count-vs-count-distinct'],
+  Types: ['varchar-vs-nvarchar', 'int-decimal-money', 'null-vs-blank'],
+  Functions: ['isnull', 'case-when', 'trim'],
+};
 
 function topicOf(a) {
   const s = `${a.slug} ${a.name}`.toLowerCase();
@@ -630,7 +650,7 @@ function page({ title, description, body, canonical, shell }) {
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
   <link rel="stylesheet" href="/css/app.css">
 </head>
-<body${shell === 'catalog' ? ' class="catalog"' : ''}>
+<body${shell === 'catalog' ? ' class="catalog"' : (shell === 'guides' || shell === 'tools') ? ' class="guides-page"' : ''}>
   <header class="site-header" style="border-bottom:1px solid var(--line)">
     <nav class="nav">
       <a href="/" class="logo"><svg viewBox="0 0 32 32" fill="none" width="26" height="26"><ellipse cx="16" cy="7" rx="11" ry="4" fill="#1f5eff"/><path d="M5 7v18c0 2.2 4.9 4 11 4s11-1.8 11-4V7c0 2.2-4.9 4-11 4S5 9.2 5 7Z" fill="#1f5eff" opacity=".75"/></svg>WorkSQL</a>
@@ -640,6 +660,7 @@ function page({ title, description, body, canonical, shell }) {
   </header>
   <main>${body}</main>
   <footer class="footer">${footerInner()}</footer>
+  <script type="module" src="/js/back.js"></script>
 </body>
 </html>`;
 }
@@ -663,7 +684,7 @@ function renderArticle(a, lesson, origin) {
     </section>`
     : `<section class="try"><h2>Try it at the desk</h2><p>Monday is free. Clock in and write the query yourself.</p><a class="btn btn-primary" href="/work">Clock in</a></section>`;
   const body = `<article class="article">
-    <div class="crumb"><a href="${hub.href}">${esc(hub.label)}</a> › ${esc(a.name)}</div>
+    <div class="crumb">${crumbBack(hub.href)}<a href="${hub.href}">${esc(hub.label)}</a> › ${esc(a.name)}</div>
     <h1>${esc(a.title)}</h1>
     <p class="lede">${esc(a.lede)}</p>
     ${a.body()}
@@ -683,6 +704,7 @@ function renderArticle(a, lesson, origin) {
 function renderIndex(origin) {
   const refs = articles.filter((a) => !isGuide(a));
   const body = `<article class="article">
+    <div class="crumb">${crumbBack('/')}T-SQL reference</div>
     <h1>T-SQL reference</h1>
     <p class="lede">Short answers to the SQL Server functions people search for at work. Each one ends with a ticket you can try it on. For the “Harvey needs last week” kind of job, see <a href="/guides">Guides</a>.</p>
     ${catalogSearch({ placeholder: 'GETDATE, DATEADD, CASE, ROW_NUMBER…', total: refs.length, noun: 'pages' })}
@@ -691,21 +713,156 @@ function renderIndex(origin) {
   return page({ title: 'T-SQL reference: SQL Server functions explained | WorkSQL', description: 'Plain-English SQL Server reference: GETDATE, DATEADD, DATEDIFF, ISNULL, TOP, CASE, LEFT JOIN, ROW_NUMBER, grouping by month and the GROUP BY error.', body, canonical: origin && `${origin}/tsql` });
 }
 
+function featuredOf(topic, list) {
+  const want = TOPIC_FEATURED[topic] || [];
+  const bySlug = new Map(list.map((a) => [a.slug, a]));
+  const out = [];
+  for (const slug of want) {
+    const a = bySlug.get(slug);
+    if (a) out.push(a);
+  }
+  for (const a of list) {
+    if (out.length >= 3) break;
+    if (!out.includes(a)) out.push(a);
+  }
+  return out.slice(0, 3);
+}
+
 function renderGuides(origin) {
-  const used = new Set(articles.map(topicOf));
-  const chips = ['All', ...TOPIC_ORDER.filter((t) => used.has(t))];
-  const cards = articles.slice().sort((a, b) => TOPIC_ORDER.indexOf(topicOf(a)) - TOPIC_ORDER.indexOf(topicOf(b))).map((a) => catalogCard({
-    href: pathOf(a), name: a.name, short: a.short, extra: a.title + ' ' + a.slug, cat: topicOf(a),
-  })).join('');
-  const body = `<div class="lib">
-    <header class="lib-head">
-      <h1>Guides</h1>
-      <p>Workplace SQL Server pages. Search a function, or pick a topic.</p>
-    </header>
-    ${catalogSearch({ placeholder: 'LEFT JOIN, yesterday, CAST, ROW_NUMBER…', total: articles.length, noun: 'guides', variant: 'lib', chips })}
-    <div class="lib-grid" id="guides">${cards}</div>
+  const byTopic = {};
+  for (const t of TOPIC_ORDER) byTopic[t] = [];
+  for (const a of articles) {
+    const t = topicOf(a);
+    if (!byTopic[t]) byTopic[t] = [];
+    byTopic[t].push(a);
+  }
+  const topics = TOPIC_ORDER.filter((t) => (byTopic[t] || []).length);
+  const total = articles.length;
+
+  const tabs = `<div class="g-tabs" id="catalog-chips" role="tablist">
+    <button type="button" class="g-tab" data-chip="All" aria-pressed="true">All (${total})</button>
+    ${topics.map((t) => `<button type="button" class="g-tab" data-chip="${esc(t)}" aria-pressed="false">${esc(t)} (${byTopic[t].length})</button>`).join('')}
   </div>`;
-  return page({ title: 'SQL Server guides for work | WorkSQL', description: 'Searchable SQL Server guides: LEFT JOIN, RIGHT JOIN, age from a date, CAST, GROUP BY, and the workplace queries people actually send.', body, canonical: origin && `${origin}/guides`, shell: 'catalog' });
+
+  const sections = topics.map((t) => {
+    const list = byTopic[t];
+    const featured = featuredOf(t, list);
+    const ordered = featured.concat(list.filter((a) => !featured.includes(a)));
+    const items = ordered.map((a, i) => {
+      const more = i >= 3 ? ' g-more' : '';
+      const search = searchBits([a.name, a.short, a.title, a.slug, t].join(' '));
+      return `<a class="g-item ref-link${more}" href="${pathOf(a)}" data-search="${search}" data-cat="${esc(t)}">
+        <b>${esc(a.name)} <span aria-hidden="true">→</span></b>
+        <span>${esc(a.short)}</span>
+      </a>`;
+    }).join('');
+    return `<section class="g-sec" data-topic="${esc(t)}" id="topic-${esc(t).toLowerCase().replace(/\s+/g, '-')}">
+      <header class="g-sec-head">
+        <span class="g-sec-ico" aria-hidden="true">${catalogIcon(t)}</span>
+        <div class="g-sec-copy">
+          <h2>${esc(t)} <span>${list.length} guide${list.length === 1 ? '' : 's'}</span></h2>
+          <p>${esc(TOPIC_BLURB[t] || '')}</p>
+        </div>
+        <button type="button" class="g-viewall" data-topic="${esc(t)}">View all →</button>
+      </header>
+      <div class="g-grid">${items}</div>
+    </section>`;
+  }).join('');
+
+  const body = `<div class="g-page">
+    <section class="g-hero">
+      <div class="g-hero-inner">
+        <p class="lib-back">${crumbBack('/')}</p>
+        <div class="eyebrow">Guides</div>
+        <h1>Workplace SQL Server guides</h1>
+        <p class="g-lede">Practical, example-led pages for the SQL you actually use at work.</p>
+        <form class="lib-search g-search" role="search">
+          <label class="visually-hidden" for="q">Search guides</label>
+          <input id="q" name="q" type="search" placeholder="Search guides… e.g. LEFT JOIN, yesterday, ROW_NUMBER" autocomplete="off">
+          <button class="btn btn-primary" type="submit">Search</button>
+        </form>
+      </div>
+    </section>
+    <div class="g-body">
+      ${tabs}
+      <p class="guide-count g-count" id="catalog-count" hidden>${total} guides</p>
+      <div id="guides">${sections}</div>
+    </div>
+  </div>
+  <script>
+    (function () {
+      const box = document.getElementById('q');
+      const count = document.getElementById('catalog-count');
+      const chips = document.getElementById('catalog-chips');
+      const total = ${total};
+      const apply = () => {
+        const cards = [...document.querySelectorAll('.ref-link[data-search]')];
+        const s = (box.value || '').trim().toLowerCase();
+        const chip = chips && [...chips.querySelectorAll('.g-tab')].find((b) => b.getAttribute('aria-pressed') === 'true');
+        const cat = chip && chip.getAttribute('data-chip');
+        const want = cat && cat !== 'All' ? cat : '';
+        let n = 0;
+        const searching = !!s;
+        for (const el of cards) {
+          const text = !s || (el.getAttribute('data-search') || '').includes(s);
+          const topic = !want || el.getAttribute('data-cat') === want;
+          const preview = !want && !searching && el.classList.contains('g-more');
+          const on = text && topic && !preview;
+          el.hidden = !on;
+          if (text && topic) n++;
+        }
+        for (const sec of document.querySelectorAll('.g-sec')) {
+          const topic = sec.getAttribute('data-topic');
+          const matchTopic = !want || topic === want;
+          const any = [...sec.querySelectorAll('.ref-link')].some((c) => !c.hidden);
+          sec.hidden = !(matchTopic && any);
+          const view = sec.querySelector('.g-viewall');
+          if (view) view.hidden = !!(want || searching);
+        }
+        if (count) {
+          count.hidden = !(s || want);
+          count.textContent = (s || want) ? n + ' of ' + total + ' guides' : total + ' guides';
+        }
+      };
+      box.addEventListener('input', apply);
+      box.form && box.form.addEventListener('submit', (e) => { e.preventDefault(); apply(); });
+      const setTopic = (key) => {
+        for (const x of chips.querySelectorAll('.g-tab')) {
+          x.setAttribute('aria-pressed', x.getAttribute('data-chip') === key ? 'true' : 'false');
+        }
+        const url = new URL(location.href);
+        if (!key || key === 'All') url.searchParams.delete('topic');
+        else url.searchParams.set('topic', key);
+        history.replaceState(null, '', url);
+        apply();
+      };
+      if (chips) {
+        chips.addEventListener('click', (e) => {
+          const b = e.target.closest('.g-tab');
+          if (!b) return;
+          setTopic(b.getAttribute('data-chip'));
+        });
+      }
+      document.getElementById('guides').addEventListener('click', (e) => {
+        const b = e.target.closest('.g-viewall');
+        if (!b) return;
+        setTopic(b.getAttribute('data-topic'));
+        const tab = chips.querySelector('.g-tab[aria-pressed="true"]');
+        if (tab) tab.scrollIntoView({ block: 'nearest', inline: 'center' });
+      });
+      const boot = () => {
+        const start = new URLSearchParams(location.search);
+        const q = start.get('q');
+        if (q) box.value = q;
+        const topic = start.get('topic');
+        if (topic && chips) setTopic(topic);
+        else apply();
+      };
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+      else boot();
+    })();
+  </script>`;
+  return page({ title: 'SQL Server guides for work | WorkSQL', description: 'Searchable SQL Server guides: LEFT JOIN, RIGHT JOIN, age from a date, CAST, GROUP BY, and the workplace queries people actually send.', body, canonical: origin && `${origin}/guides`, shell: 'guides' });
 }
 
 function sitemapPaths() {

@@ -15,6 +15,7 @@ for (const a of articles) {
   assert.ok(html.includes('<h2>') && html.includes('<pre>'), `${a.slug} has a heading and SQL`);
   const page = renderArticle(a, lessons.find((l) => l.id === a.lesson), 'https://worksql.com');
   assert.ok(page.includes(`rel="canonical" href="https://worksql.com${pathOf(a)}"`), `${a.slug} canonical`);
+  assert.ok(page.includes('data-back') && page.includes('/js/back.js'), `${a.slug} has Back`);
   assert.ok(listing(a).href === pathOf(a));
 }
 
@@ -22,7 +23,10 @@ assert.ok(sitemapPaths().includes('/guides') && sitemapPaths().includes('/guides
 assert.ok(sitemapPaths().includes('/support') && sitemapPaths().includes('/privacy') && sitemapPaths().includes('/terms'));
 assert.ok(renderGuides('https://worksql.com').includes('last-week-orders'));
 assert.ok(renderGuides('https://worksql.com').includes('data-search=') && renderGuides('https://worksql.com').includes('id="q"'));
-assert.ok(renderGuides('https://worksql.com').includes('class="lib"') && renderGuides('https://worksql.com').includes('lib-chip'));
+assert.ok(renderGuides('https://worksql.com').includes('g-hero') && renderGuides('https://worksql.com').includes('Workplace SQL Server guides'));
+assert.ok(renderGuides('https://worksql.com').includes('g-tab') && renderGuides('https://worksql.com').includes('g-sec'));
+assert.ok(require('node:fs').readFileSync(require('node:path').join(__dirname, '..', 'public', 'css', 'app.css'), 'utf8').includes('guides_bg.png'));
+assert.ok(require('node:fs').existsSync(require('node:path').join(__dirname, '..', 'public', 'img', 'guides_bg.png')));
 assert.ok(renderIndex('https://worksql.com').includes('/tsql/getdate'));
 assert.ok(renderIndex('https://worksql.com').includes('data-search='));
 console.log(`articles: ${articles.length} pages ok`);

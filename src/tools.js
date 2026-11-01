@@ -1,11 +1,35 @@
 // Free in-browser T-SQL tools. Pages are rendered on the server so Google can read them.
 // The widgets run in public/js/tools.js. Nothing is sent to our server.
 const { page } = require('./articles');
-const { esc } = require('./article-html');
+const { esc, crumbBack } = require('./article-html');
 
 const extraTools = require('./tools-more');
 const enterpriseTools = require('./tools-enterprise');
-const { catalogSearch, catalogCard } = require('./search');
+const { catalogIcon, searchBits } = require('./search');
+
+const GROUP_ORDER = ['Hubs', 'Everyday', 'Architecture', 'Aggregation', 'Cleaning', 'Speed', 'Security', 'Quality of life'];
+
+const GROUP_BLURB = {
+  Hubs: 'Converters and the interview sandbox. Paste in the browser; nothing is uploaded.',
+  Everyday: 'Format a query, build a date filter, mock a few rows.',
+  Architecture: 'Schema diagrams, data types, keys, and ALTER drafts.',
+  Aggregation: 'CASE, cohorts, fiscal years, PIVOT blueprints.',
+  Cleaning: 'CSV and JSON in, INSERT and OPENJSON out. Find the duplicates.',
+  Speed: 'JOINs, indexes, SARGable rewrites, and WHEN LIKE hurts.',
+  Security: 'Masking, PII, RLS drafts, and a quick injection check.',
+  'Quality of life': 'Calendar CTEs, connection strings, batching, IN-lists.',
+};
+
+const GROUP_FEATURED = {
+  Hubs: ['/excel-to-sql', '/pandas-to-sql', '/sql-translator'],
+  Everyday: ['formatter', 'dates', 'mock-data'],
+  Architecture: ['schema-diagram', 'data-type', 'schema-diff'],
+  Aggregation: ['case-builder', 'cohort', 'pivot'],
+  Cleaning: ['csv-insert', 'json-openjson', 'dupes'],
+  Speed: ['join-venn', 'index-advisor', 'sargable'],
+  Security: ['masking', 'anonymize', 'rls'],
+  'Quality of life': ['tally', 'conn-string', 'batcher'],
+};
 
 const coreTools = [
   {
@@ -133,35 +157,174 @@ const coreTools = [
 
 const tools = coreTools.concat(extraTools, enterpriseTools);
 
-function renderTools(origin) {
-  const groups = [];
-  for (const t of tools) {
-    const g = t.group || 'Everyday';
-    if (!groups.includes(g)) groups.push(g);
+function featuredOf(group, list) {
+  const want = GROUP_FEATURED[group] || [];
+  const keyOf = (it) => it.key || it.slug || it.href;
+  const byKey = new Map(list.map((it) => [keyOf(it), it]));
+  const out = [];
+  for (const key of want) {
+    const it = byKey.get(key);
+    if (it) out.push(it);
   }
+  for (const it of list) {
+    if (out.length >= 3) break;
+    if (!out.includes(it)) out.push(it);
+  }
+  return out.slice(0, 3);
+}
+
+function renderTools(origin) {
   const hubs = [
-    { href: '/excel-to-sql', name: 'Excel → T-SQL', short: 'VLOOKUP, IF, COUNTIF, SUMPRODUCT. One page per function.', extra: 'excel convert' },
-    { href: '/pandas-to-sql', name: 'Pandas → T-SQL', short: 'merge, groupby, fillna, drop_duplicates, loc.', extra: 'pandas convert' },
-    { href: '/sql-translator', name: 'SQL dialect translator', short: 'MySQL, Postgres, Oracle, Snowflake → SQL Server.', extra: 'mysql limit dialect' },
-    { href: '/interview', name: 'Interview sandbox', short: 'Top N per group, running totals, anti-joins. Draft and reveal.', extra: 'interview sql' },
+    { key: '/excel-to-sql', href: '/excel-to-sql', name: 'Excel → T-SQL', short: 'VLOOKUP, IF, COUNTIF, SUMPRODUCT. One page per function.', extra: 'excel convert', group: 'Hubs' },
+    { key: '/pandas-to-sql', href: '/pandas-to-sql', name: 'Pandas → T-SQL', short: 'merge, groupby, fillna, drop_duplicates, loc.', extra: 'pandas convert', group: 'Hubs' },
+    { key: '/sql-translator', href: '/sql-translator', name: 'SQL dialect translator', short: 'MySQL, Postgres, Oracle, Snowflake → SQL Server.', extra: 'mysql limit dialect', group: 'Hubs' },
+    { key: '/interview', href: '/interview', name: 'Interview sandbox', short: 'Top N per group, running totals, anti-joins. Draft and reveal.', extra: 'interview sql', group: 'Hubs' },
   ];
-  const cards = [
-    ...hubs.map((h) => catalogCard({ ...h, cat: 'Hubs' })),
-    ...tools.map((t) => catalogCard({
-      href: `/tools/${t.slug}`, name: t.name, short: t.short, extra: t.slug + ' ' + (t.group || '') + ' ' + t.title, cat: t.group || 'Everyday',
+  const items = [
+    ...hubs,
+    ...tools.map((t) => ({
+      key: t.slug, href: `/tools/${t.slug}`, name: t.name, short: t.short,
+      extra: t.slug + ' ' + (t.group || '') + ' ' + t.title, group: t.group || 'Everyday',
     })),
-  ].join('');
-  const total = tools.length + hubs.length;
-  const chips = ['All', 'Hubs', ...groups];
-  const body = `<div class="lib">
-    <header class="lib-head">
-      <h1>Free tools</h1>
-      <p>${tools.length} in-browser utilities, plus converters and an interview sandbox. Nothing is uploaded.</p>
-    </header>
-    ${catalogSearch({ placeholder: 'Formatter, VLOOKUP, SARGable, MERGE, RLS…', total, noun: 'tools', variant: 'lib', chips })}
-    <div class="lib-grid">${cards}</div>
+  ];
+  const byGroup = {};
+  for (const g of GROUP_ORDER) byGroup[g] = [];
+  for (const it of items) {
+    const g = it.group;
+    if (!byGroup[g]) byGroup[g] = [];
+    byGroup[g].push(it);
+  }
+  const groups = GROUP_ORDER.filter((g) => (byGroup[g] || []).length);
+  const total = items.length;
+
+  const tabs = `<div class="g-tabs" id="catalog-chips" role="tablist">
+    <button type="button" class="g-tab" data-chip="All" aria-pressed="true">All (${total})</button>
+    ${groups.map((g) => `<button type="button" class="g-tab" data-chip="${esc(g)}" aria-pressed="false">${esc(g)} (${byGroup[g].length})</button>`).join('')}
   </div>`;
-  return page({ title: 'Free T-SQL tools for SQL Server | WorkSQL', description: 'Free in-browser T-SQL tools: formatter, DATEADD, mock INSERTs, schema diagrams, CASE builder, PIVOT, SARGable rewrite, RLS drafts, Excel-to-SQL, IN-list builder.', body, canonical: origin && `${origin}/tools`, shell: 'catalog' });
+
+  const sections = groups.map((g) => {
+    const list = byGroup[g];
+    const featured = featuredOf(g, list);
+    const ordered = featured.concat(list.filter((it) => !featured.includes(it)));
+    const cards = ordered.map((it, i) => {
+      const more = i >= 3 ? ' g-more' : '';
+      const search = searchBits([it.name, it.short, it.extra, g].filter(Boolean).join(' '));
+      return `<a class="g-item g-item-tool ref-link${more}" href="${esc(it.href)}" data-search="${search}" data-cat="${esc(g)}">
+        <b>${esc(it.name)}</b>
+        <span>${esc(it.short)}</span>
+        <em class="g-arrow" aria-hidden="true">→</em>
+      </a>`;
+    }).join('');
+    return `<section class="g-sec" data-topic="${esc(g)}">
+      <header class="g-sec-head g-sec-head-tools">
+        <span class="g-sec-ico" aria-hidden="true">${catalogIcon(g)}</span>
+        <div class="g-sec-copy">
+          <h2>${esc(g)}</h2>
+          <p>${esc(GROUP_BLURB[g] || '')}</p>
+        </div>
+        <div class="g-sec-aside">
+          <span class="g-sec-count">${list.length} tool${list.length === 1 ? '' : 's'}</span>
+          <button type="button" class="g-viewall" data-topic="${esc(g)}">View all →</button>
+        </div>
+      </header>
+      <div class="g-grid">${cards}</div>
+    </section>`;
+  }).join('');
+
+  const body = `<div class="g-page">
+    <section class="g-hero">
+      <div class="g-hero-inner">
+        <p class="lib-back">${crumbBack('/')}</p>
+        <div class="eyebrow">Free tools</div>
+        <h1>Free tools</h1>
+        <p class="g-lede">${tools.length} in-browser utilities, plus converters and an interview sandbox. Nothing is uploaded.</p>
+        <form class="lib-search g-search" role="search">
+          <label class="visually-hidden" for="q">Search tools</label>
+          <input id="q" name="q" type="search" placeholder="Search tools… e.g. Formatter, VLOOKUP, SARGable, MERGE, RLS…" autocomplete="off">
+          <button class="btn btn-primary" type="submit">Search</button>
+        </form>
+      </div>
+    </section>
+    <div class="g-body">
+      ${tabs}
+      <p class="guide-count g-count" id="catalog-count" hidden>${total} tools</p>
+      <div id="tools">${sections}</div>
+    </div>
+  </div>
+  <script>
+    (function () {
+      const box = document.getElementById('q');
+      const count = document.getElementById('catalog-count');
+      const chips = document.getElementById('catalog-chips');
+      const total = ${total};
+      const apply = () => {
+        const cards = [...document.querySelectorAll('.ref-link[data-search]')];
+        const s = (box.value || '').trim().toLowerCase();
+        const chip = chips && [...chips.querySelectorAll('.g-tab')].find((b) => b.getAttribute('aria-pressed') === 'true');
+        const cat = chip && chip.getAttribute('data-chip');
+        const want = cat && cat !== 'All' ? cat : '';
+        const searching = !!s;
+        let n = 0;
+        for (const el of cards) {
+          const text = !s || (el.getAttribute('data-search') || '').includes(s);
+          const topic = !want || el.getAttribute('data-cat') === want;
+          const preview = !want && !searching && el.classList.contains('g-more');
+          const on = text && topic && !preview;
+          el.hidden = !on;
+          if (text && topic) n++;
+        }
+        for (const sec of document.querySelectorAll('.g-sec')) {
+          const topic = sec.getAttribute('data-topic');
+          const matchTopic = !want || topic === want;
+          const any = [...sec.querySelectorAll('.ref-link')].some((c) => !c.hidden);
+          sec.hidden = !(matchTopic && any);
+          const view = sec.querySelector('.g-viewall');
+          if (view) view.hidden = !!(want || searching);
+        }
+        if (count) {
+          count.hidden = !(s || want);
+          count.textContent = (s || want) ? n + ' of ' + total + ' tools' : total + ' tools';
+        }
+      };
+      box.addEventListener('input', apply);
+      box.form && box.form.addEventListener('submit', (e) => { e.preventDefault(); apply(); });
+      const setTopic = (key) => {
+        for (const x of chips.querySelectorAll('.g-tab')) {
+          x.setAttribute('aria-pressed', x.getAttribute('data-chip') === key ? 'true' : 'false');
+        }
+        const url = new URL(location.href);
+        if (!key || key === 'All') url.searchParams.delete('topic');
+        else url.searchParams.set('topic', key);
+        history.replaceState(null, '', url);
+        apply();
+      };
+      if (chips) {
+        chips.addEventListener('click', (e) => {
+          const b = e.target.closest('.g-tab');
+          if (!b) return;
+          setTopic(b.getAttribute('data-chip'));
+        });
+      }
+      document.getElementById('tools').addEventListener('click', (e) => {
+        const b = e.target.closest('.g-viewall');
+        if (!b) return;
+        setTopic(b.getAttribute('data-topic'));
+        const tab = chips.querySelector('.g-tab[aria-pressed="true"]');
+        if (tab) tab.scrollIntoView({ block: 'nearest', inline: 'center' });
+      });
+      const boot = () => {
+        const start = new URLSearchParams(location.search);
+        const q = start.get('q');
+        if (q) box.value = q;
+        const topic = start.get('topic');
+        if (topic && chips) setTopic(topic);
+        else apply();
+      };
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+      else boot();
+    })();
+  </script>`;
+  return page({ title: 'Free T-SQL tools for SQL Server | WorkSQL', description: 'Free in-browser T-SQL tools: formatter, DATEADD, mock INSERTs, schema diagrams, CASE builder, PIVOT, SARGable rewrite, RLS drafts, Excel-to-SQL, IN-list builder.', body, canonical: origin && `${origin}/tools`, shell: 'tools' });
 }
 
 function renderTool(tool, origin) {
@@ -169,7 +332,7 @@ function renderTool(tool, origin) {
   const rest = tools.filter((x) => x !== tool && x.group !== tool.group);
   const others = same.concat(rest).slice(0, 8);
   const body = `<article class="article">
-    <div class="crumb"><a href="/tools">Tools</a> › ${esc(tool.name)}</div>
+    <div class="crumb">${crumbBack('/tools')}<a href="/tools">Tools</a> › ${esc(tool.name)}</div>
     <h1>${esc(tool.title)}</h1>
     <p class="lede">${esc(tool.lede)}</p>
     ${tool.widget}
