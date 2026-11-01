@@ -1,29 +1,57 @@
 // The homepage demo: one ticket, start to finish, played out in nine short scenes
 // grouped into four chapters (request, query, feedback, reply).
 // It runs real queries against Harbour & Co, so the rows and the "6 rows, should be 5" mistake are genuine.
-import { icons, esc } from '/js/common.js';
+import { icons, esc, dialect, DIALECTS } from '/js/common.js';
 import { highlight } from '/js/editor.js';
 
 const root = document.getElementById('demo');
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 // ================= queries (run for real) =================
-const SELECT_PART = `SELECT
+// One film, three skins: the story is the same, only the SQL and the server labels follow the
+// stack picked on the homepage.
+const SKINS = {
+  tsql: {
+    name: "c.first_name + ' ' + c.last_name",
+    wrong: 'o.order_date >= DATEADD(day, -7, GETDATE())',
+    right: 'o.order_date >= DATEADD(day, -7, CAST(GETDATE() AS date))\n  AND o.order_date < CAST(GETDATE() AS date)  -- not today',
+    prefix: 'dbo.',
+    types: { int: 'int', decimal: 'decimal', varchar: 'varchar' },
+  },
+  postgres: {
+    name: "c.first_name || ' ' || c.last_name",
+    wrong: "o.order_date >= now() - INTERVAL '7 days'",
+    right: "o.order_date >= CURRENT_DATE - INTERVAL '7 days'\n  AND o.order_date < CURRENT_DATE  -- not today",
+    prefix: '',
+    types: { int: 'integer', decimal: 'numeric', varchar: 'varchar' },
+  },
+  mysql: {
+    name: "CONCAT(c.first_name, ' ', c.last_name)",
+    wrong: 'o.order_date >= NOW() - INTERVAL 7 DAY',
+    right: 'o.order_date >= CURDATE() - INTERVAL 7 DAY\n  AND o.order_date < CURDATE()  -- not today',
+    prefix: '',
+    types: { int: 'int', decimal: 'decimal', varchar: 'varchar' },
+  },
+};
+const ORDER = '\nORDER BY o.order_date DESC;';
+let stack; let skin; let SELECT_PART; let WRONG_WHERE; let RIGHT_WHERE; let WRONG_SQL; let RIGHT_SQL;
+function applySkin() {
+  stack = dialect();
+  skin = SKINS[stack];
+  SELECT_PART = `SELECT
     o.order_id,
-    c.first_name + ' ' + c.last_name AS customer_name,
+    ${skin.name} AS customer_name,
     o.order_date,
     o.total_amount
 FROM Orders o
 JOIN Customers c ON c.customer_id = o.customer_id
 `;
-const WRONG_WHERE = `WHERE o.order_date >= DATEADD(day, -7, GETDATE())
-  AND o.total_amount > 50`;
-const RIGHT_WHERE = `WHERE o.order_date >= DATEADD(day, -7, CAST(GETDATE() AS date))
-  AND o.order_date < CAST(GETDATE() AS date)  -- not today
-  AND o.total_amount > 50`;
-const ORDER = '\nORDER BY o.order_date DESC;';
-const WRONG_SQL = SELECT_PART + WRONG_WHERE + ORDER;
-const RIGHT_SQL = SELECT_PART + RIGHT_WHERE + ORDER;
+  WRONG_WHERE = `WHERE ${skin.wrong}\n  AND o.total_amount > 50`;
+  RIGHT_WHERE = `WHERE ${skin.right}\n  AND o.total_amount > 50`;
+  WRONG_SQL = SELECT_PART + WRONG_WHERE + ORDER;
+  RIGHT_SQL = SELECT_PART + RIGHT_WHERE + ORDER;
+}
+applySkin();
 
 const today = new Date();
 const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -32,7 +60,7 @@ let wrongRows = [];
 let rightRows = [];
 
 async function loadRows() {
-  const q = (sql) => fetch('/api/query', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sql }) }).then((r) => r.json());
+  const q = (sql) => fetch('/api/query', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sql, dialect: stack }) }).then((r) => r.json());
   try {
     const [w, r] = await Promise.all([q(WRONG_SQL), q(RIGHT_SQL)]);
     if (w.rows && r.rows) { wrongRows = w.rows; rightRows = r.rows; return; }
@@ -141,14 +169,14 @@ function inbox(items) {
 
 const TREE_COLS = [['order_id', 'int'], ['customer_id', 'int'], ['order_date', 'date'], ['total_amount', 'decimal'], ['status', 'varchar']];
 function ssmsShell({ ordersOpen = false } = {}) {
-  const cols = TREE_COLS.map(([c, t]) => `<div class="d-node col"><span>▫</span> ${c} <em>(${t})</em></div>`).join('');
+  const cols = TREE_COLS.map(([c, t]) => `<div class="d-node col"><span>▫</span> ${c} <em>(${skin.types[t] || t})</em></div>`).join('');
   return `<div class="d-app">${top('09:16')}<div class="d-body d-ssms">
     <aside class="d-oe"><div class="d-head">Object Explorer</div>
-      <div class="d-node"><span>🖥</span> HARBOUR-SQL01</div>
+      <div class="d-node"><span>🖥</span> ${esc(DIALECTS[stack].server)}</div>
       <div class="d-node l1"><span>▾ 📁</span> Tables</div>
-      <div class="d-node l2 ${ordersOpen ? 'open' : ''}" data-k="orders"><span class="tw">${ordersOpen ? '▾' : '▸'}</span> ▦ dbo.Orders</div>
+      <div class="d-node l2 ${ordersOpen ? 'open' : ''}" data-k="orders"><span class="tw">${ordersOpen ? '▾' : '▸'}</span> ▦ ${skin.prefix}Orders</div>
       <div class="d-cols ${ordersOpen ? 'show' : ''}">${cols}</div>
-      ${['Customers', 'Staff', 'Products', 'OrderLines', 'Returns'].map((t) => `<div class="d-node l2"><span class="tw">▸</span> ▦ dbo.${t}</div>`).join('')}
+      ${['Customers', 'Staff', 'Products', 'OrderLines', 'Returns'].map((t) => `<div class="d-node l2"><span class="tw">▸</span> ▦ ${skin.prefix}${t}</div>`).join('')}
     </aside>
     <main class="d-doc">
       <div class="d-toolbar"><span>＋ New Query</span><span class="d-exec" data-k="exec">▶ Execute</span><span class="d-conn">Connect: Harbour &amp; Co</span></div>
@@ -305,7 +333,7 @@ const scenes = [
       tip('<b>Use the column names on the left.</b> Type <code>o.</code> or press Ctrl+Space for suggestions.');
       let text = await type(`SELECT
     o.order_id,
-    c.first_name + ' ' + c.last_name AS customer_name,
+    ${skin.name} AS customer_name,
     o.`);
       // Suggestions pop up at the caret, the selection moves, Enter accepts.
       const box = $s('.d-suggest');
@@ -313,7 +341,7 @@ const scenes = [
       const r = relRect(caret); const e = relRect($s('.d-editor'));
       box.style.left = `${r.x - e.x}px`;
       box.style.top = `${r.y - e.y + 20}px`;
-      const opts = [['order_id', 'int'], ['customer_id', 'int'], ['order_date', 'date'], ['total_amount', 'decimal'], ['status', 'varchar']];
+      const opts = TREE_COLS.map(([c, t]) => [c, skin.types[t] || t]);
       let sel = 0;
       const draw = () => { box.innerHTML = opts.map(([c, t], i) => `<li class="${i === sel ? 'sel' : ''}"><span>o.${c}</span><em>${t}</em></li>`).join(''); };
       draw();
@@ -568,6 +596,13 @@ async function init() {
   scenes[0].setup();
   chapterUI();
   await loadRows();
+
+  // Picking a stack in the hero reskins the film: same scene, that stack's SQL.
+  document.addEventListener('worksql:dialect', async () => {
+    applySkin();
+    await loadRows();
+    if (started) { paused = false; setPlayIcon(); playFrom(done ? 0 : current); }
+  });
 
   // Start when it scrolls into view; pause when it leaves (unless the visitor paused it).
   let userPaused = false;
