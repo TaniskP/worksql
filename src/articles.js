@@ -1,11 +1,12 @@
 // T-SQL reference pages: the things people type into Google at work, answered properly,
 // each ending in a ticket to try it on. Rendered on the server so search engines can read them.
 
-const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const sql = (s) => `<pre><code>${esc(s.trim())}</code></pre>`;
-const c = (s) => `<code>${esc(s)}</code>`;
+const { esc, sql, c } = require('./article-html');
+const extra = require('./topics');
+const { navInner } = require('./nav');
+const { catalogSearch, searchBits } = require('./search');
 
-const articles = [
+const core = [
   {
     slug: 'getdate', name: 'GETDATE()', lesson: 5,
     title: 'SQL Server GETDATE(): today, yesterday and the last 7 days',
@@ -292,7 +293,312 @@ GROUP BY status;   -- without this line, COUNT(*) is one total for the whole tab
 <div class="mistake"><b>The alias version</b>
 <p>${c('GROUP BY size')} where ${c('size')} is a CASE alias gives a similar error. GROUP BY runs before SELECT, so repeat the CASE expression or put it in a CTE.</p></div>`,
   },
+  {
+    kind: 'guide', slug: 'last-week-orders', name: 'Last week’s orders', lesson: 5,
+    title: 'How to pull last week’s orders in SQL Server (not “the last 7 days”)',
+    short: 'Monday–Sunday last week, not a rolling 7 days ending now.',
+    description: 'The SQL Server date filter for last week’s orders: whole days, Monday to Sunday (or Sunday to Saturday), without today’s rows sneaking in.',
+    lede: 'When someone says “last week’s orders” they mean the calendar week that just finished, not a sliding window of 168 hours. Those two queries return different money.',
+    body: () => `
+<h2>What they actually asked for</h2>
+<p>James wants last week. If today is Thursday 30 October, last week is Monday 20 to Sunday 26, not “from last Thursday until now”. A rolling ${c('DATEADD(day, -7, GETDATE())')} includes this morning and drops half of last Thursday.</p>
+<h2>UK week: Monday to Sunday</h2>
+${sql(`DECLARE @today date = CAST(GETDATE() AS date);
+DECLARE @thisMonday date = DATEADD(day, 1 - DATEPART(weekday, DATEADD(day, -1, @today)), @today);
+-- weekday of Monday after shifting so Monday = 1, when DATEFIRST is 7 (US default)
+
+SELECT order_id, order_date, total_amount
+FROM Orders
+WHERE order_date >= DATEADD(week, -1, @thisMonday)
+  AND order_date <  @thisMonday
+ORDER BY order_date;`)}
+<p>SQL Server’s ${c('DATEPART(weekday, …)')} depends on ${c('DATEFIRST')}. The safer habit on a shared server is to pin the week yourself.</p>
+<h2>A version that does not care about DATEFIRST</h2>
+${sql(`DECLARE @today date = CAST(GETDATE() AS date);
+DECLARE @thisMonday date = DATEADD(day, -(DATEDIFF(day, '20000103', @today) % 7), @today);
+-- 3 Jan 2000 was a Monday
+
+SELECT order_id, customer_id, total_amount, order_date
+FROM Orders
+WHERE order_date >= DATEADD(day, -7, @thisMonday)
+  AND order_date <  @thisMonday;`)}
+<div class="mistake"><b>The rolling 7 days</b>
+<p>${c('WHERE order_date >= DATEADD(day, -7, GETDATE())')} is “the last 7 × 24 hours”. Finance will reconcile it against last week’s pack and the numbers will not match. If they said last week, give them last week.</p></div>
+<h2>Send the total with it</h2>
+${sql(`SELECT COUNT(*) AS orders, SUM(total_amount) AS revenue
+FROM Orders
+WHERE order_date >= DATEADD(day, -7, @thisMonday)
+  AND order_date <  @thisMonday;`)}
+<p>Put the range in the email subject: “Orders Mon 20–Sun 26 Oct”. Then nobody asks whether today is in it.</p>`,
+  },
+  {
+    kind: 'guide', slug: 'yesterday-sales', name: 'Yesterday’s sales', lesson: 37,
+    title: 'Yesterday’s sales in SQL Server: a date filter that does not leak today',
+    short: 'Midnight to midnight. Today’s orders stay out.',
+    description: 'How to write yesterday’s sales in SQL Server so GETDATE() does not pull through this morning’s orders.',
+    lede: '“Yesterday” sounds like one line. Most leaked reports use GETDATE() on both ends and quietly include this morning.',
+    body: () => `
+<h2>The range</h2>
+${sql(`DECLARE @today date = CAST(GETDATE() AS date);
+
+SELECT order_id, order_date, total_amount, status
+FROM Orders
+WHERE order_date >= DATEADD(day, -1, @today)
+  AND order_date <  @today
+ORDER BY order_date;`)}
+<p>Lower bound is midnight yesterday. Upper bound is midnight today, not included. Works for ${c('date')} and ${c('datetime')} columns.</p>
+<div class="mistake"><b>These two look right and are not</b>
+<p>${c('WHERE CAST(order_date AS date) = CAST(GETDATE() AS date)')} is <em>today</em>. ${c('WHERE order_date >= DATEADD(day, -1, GETDATE())')} starts at this <em>time</em> yesterday and has no end, so today’s rows come with it.</p></div>
+<h2>One number for the stand-up</h2>
+${sql(`SELECT COUNT(*) AS orders,
+       SUM(total_amount) AS revenue,
+       SUM(CASE WHEN status = 'Cancelled' THEN 1 ELSE 0 END) AS cancelled
+FROM Orders
+WHERE order_date >= DATEADD(day, -1, CAST(GETDATE() AS date))
+  AND order_date <  CAST(GETDATE() AS date);`)}
+<p>If they also want “same day last week”, subtract 8 and 7 days from midnight today. Same shape, different bounds.</p>`,
+  },
+  {
+    kind: 'guide', slug: 'why-select-star-fails', name: 'Why SELECT * fails', lesson: 1,
+    title: 'Why SELECT * is a problem at work (and why we mark it wrong)',
+    short: 'Extra columns break the paste. Name what they asked for.',
+    description: 'Why SELECT * is refused in workplace SQL Server reports: column order, extra fields, and the habit that survives a schema change.',
+    lede: 'SELECT * feels faster. The person who asked for three columns will paste your result into a sheet that has three headers. The fourth column wrecks the paste.',
+    body: () => `
+<h2>What they asked for</h2>
+<p>Amy wants ${c('order_id')}, ${c('customer_id')}, ${c('total_amount')}. That is the contract. ${c('SELECT *')} also returns dates, status, staff ids, whatever the table grew last Tuesday.</p>
+${sql(`-- What they asked for
+SELECT order_id, customer_id, total_amount
+FROM Orders
+WHERE status = 'Shipped'
+ORDER BY total_amount DESC;`)}
+<h2>It also breaks next month</h2>
+<p>Add a column to ${c('Orders')} and every ${c('SELECT *')} downstream changes shape. Named columns keep last quarter’s workbook working.</p>
+<div class="mistake"><b>“I’ll drop the extras in Excel”</b>
+<p>You will, the first time. The fifth time, someone else runs the script and they will not. Write the columns once.</p></div>
+<h2>When SELECT * is fine</h2>
+<p>Peeking in SSMS. ${c('SELECT TOP (20) * FROM Orders')} to see what a table looks like. Not in anything you send, save, or schedule.</p>`,
+  },
+  {
+    kind: 'guide', slug: 'where-vs-having', name: 'WHERE vs HAVING', lesson: 16,
+    title: 'WHERE vs HAVING in SQL Server: filter rows, then filter groups',
+    short: 'WHERE is before the group. HAVING is after the total.',
+    description: 'The difference between WHERE and HAVING in SQL Server, with a workplace example: customers who have spent over £1,000.',
+    lede: 'WHERE throws rows away before you total them. HAVING throws groups away after. Use the wrong one and either the query fails or the total is of the wrong pile.',
+    body: () => `
+<h2>Customers over £1,000</h2>
+${sql(`SELECT customer_id, SUM(total_amount) AS spent
+FROM Orders
+WHERE status = 'Shipped'          -- drop rows first
+GROUP BY customer_id
+HAVING SUM(total_amount) > 1000  -- then drop groups
+ORDER BY spent DESC;`)}
+<p>${c('WHERE status = \'Shipped\'')} belongs on the row. ${c('HAVING SUM(total_amount) > 1000')} can only exist after ${c('GROUP BY')}.</p>
+<div class="mistake"><b>HAVING on a raw column</b>
+<p>${c('HAVING status = \'Shipped\'')} without grouping by status is the 8120 family of pain. If it is not an aggregate and not in GROUP BY, it is a WHERE.</p></div>
+<h2>You cannot put SUM in WHERE</h2>
+${sql(`-- Fails
+WHERE SUM(total_amount) > 1000`)}
+<p>WHERE runs too early. The total does not exist yet. That is the whole distinction.</p>`,
+  },
+  {
+    kind: 'guide', slug: 'count-vs-count-distinct', name: 'COUNT vs COUNT DISTINCT', lesson: 13,
+    title: 'COUNT(*) vs COUNT(DISTINCT …) in SQL Server',
+    short: 'Orders vs customers. Easy to mix up in a stand-up number.',
+    description: 'When to use COUNT(*) and COUNT(DISTINCT column) in SQL Server, and how a JOIN quietly inflates the count.',
+    lede: '“How many customers ordered last week?” is not the same question as “how many orders.” COUNT(*) answers the second. The first needs DISTINCT, or a count of customers.',
+    body: () => `
+<h2>Three numbers finance actually wants</h2>
+${sql(`SELECT COUNT(*) AS orders,
+       COUNT(DISTINCT customer_id) AS customers,
+       SUM(total_amount) AS revenue
+FROM Orders
+WHERE order_date >= DATEADD(day, -7, CAST(GETDATE() AS date))
+  AND order_date <  CAST(GETDATE() AS date);`)}
+<p>${c('COUNT(*)')} counts rows. ${c('COUNT(customer_id)')} counts non-NULL ids (usually the same). ${c('COUNT(DISTINCT customer_id)')} counts people.</p>
+<div class="mistake"><b>A JOIN then COUNT(*)</b>
+<p>Join ${c('OrderLines')} and ${c('COUNT(*)')} becomes line items, not orders. If the grain changed, say so in the column name (${c('AS lines')}), or count ${c('DISTINCT order_id')}.</p></div>
+<h2>COUNT(*) vs COUNT(column)</h2>
+<p>${c('COUNT(*)')} includes rows where the column is NULL. ${c('COUNT(phone)')} skips NULL phones. That is how “customers” and “customers we can call” diverge.</p>`,
+  },
+  {
+    kind: 'guide', slug: 'join-doubled-my-totals', name: 'JOIN doubled my totals', lesson: 36,
+    title: 'My JOIN doubled the totals: the SQL Server grain mistake',
+    short: 'One order, many lines. SUM after the join is wrong.',
+    description: 'Why a JOIN to a child table doubles SQL Server totals, and how to aggregate the lines first or count distinct orders.',
+    lede: 'You joined Orders to OrderLines to get product names and the revenue doubled. Nothing is wrong with SUM. The grain changed and nobody told SUM.',
+    body: () => `
+<h2>What happened</h2>
+<p>One order of £90 with three lines becomes three rows after the join. ${c('SUM(o.total_amount)')} adds £90 three times.</p>
+${sql(`-- Inflated
+SELECT SUM(o.total_amount) AS revenue
+FROM Orders o
+JOIN OrderLines ol ON ol.order_id = o.order_id;`)}
+<h2>Aggregate the lines first</h2>
+${sql(`SELECT o.order_id, o.total_amount, x.lines, x.units
+FROM Orders o
+JOIN (
+  SELECT order_id, COUNT(*) AS lines, SUM(quantity) AS units
+  FROM OrderLines
+  GROUP BY order_id
+) x ON x.order_id = o.order_id;`)}
+<p>Now one row per order. Totals stay honest. You can still ${c('SUM(o.total_amount)')} outside.</p>
+<div class="mistake"><b>SUM(line price) vs order total</b>
+<p>If you want revenue from lines, sum ${c('quantity * unit_price')} on ${c('OrderLines')}. If you want the order total, stay on ${c('Orders')} and do not join lines in the same grain.</p></div>`,
+  },
+  {
+    kind: 'guide', slug: 'find-duplicate-customers', name: 'Find duplicate customers', lesson: 28,
+    title: 'Find duplicate customers in SQL Server',
+    short: 'Same email twice. GROUP BY and HAVING.',
+    description: 'How to find duplicate customers in SQL Server with GROUP BY and HAVING COUNT(*) > 1, then list the actual rows.',
+    lede: 'Someone typed the same person in twice. Reports count them as two customers. You want the keys that collide, then the rows.',
+    body: () => `
+<h2>Which emails appear more than once</h2>
+${sql(`SELECT LOWER(LTRIM(RTRIM(email))) AS email, COUNT(*) AS times
+FROM Customers
+GROUP BY LOWER(LTRIM(RTRIM(email)))
+HAVING COUNT(*) > 1
+ORDER BY times DESC;`)}
+<p>Trim and lower first. ${c('Sam@Harbour.co')} and ${c('sam@harbour.co')} are one person in the real world.</p>
+<h2>Then the actual rows</h2>
+${sql(`SELECT c.customer_id, c.first_name, c.last_name, c.email
+FROM Customers c
+WHERE LOWER(LTRIM(RTRIM(c.email))) IN (
+  SELECT LOWER(LTRIM(RTRIM(email)))
+  FROM Customers
+  GROUP BY LOWER(LTRIM(RTRIM(email)))
+  HAVING COUNT(*) > 1
+)
+ORDER BY c.email, c.customer_id;`)}
+<div class="mistake"><b>Matching on name only</b>
+<p>Two John Smiths are not always a duplicate. Email, phone, or a customer code is safer. Name + postcode if that is all you have, and still check by eye before you merge.</p></div>`,
+  },
+  {
+    kind: 'guide', slug: 'convert-datetime-to-date', name: 'Datetime to date', lesson: 5,
+    title: 'Convert datetime to date in SQL Server without breaking the index',
+    short: 'CAST to date for the value. Do not wrap the column in the WHERE.',
+    description: 'How to convert datetime to date in SQL Server, and why CAST(column AS date) in the WHERE clause can slow a big table down.',
+    lede: 'You want “on this day”, but the column has a time. Cast the value you compare against, not the whole column, if you can help it.',
+    body: () => `
+<h2>Drop the time on a value</h2>
+${sql(`SELECT CAST(GETDATE() AS date) AS today,
+       CONVERT(date, GETDATE()) AS also_today;`)}
+<p>Either is fine. ${c('CAST')} is easier to read.</p>
+<h2>Filter a datetime column by a day</h2>
+${sql(`DECLARE @day date = '2026-10-30';
+
+SELECT order_id, order_date
+FROM Orders
+WHERE order_date >= @day
+  AND order_date <  DATEADD(day, 1, @day);`)}
+<p>The column stays bare. SQL Server can use an index on ${c('order_date')}.</p>
+<div class="mistake"><b>Wrapping the column</b>
+<p>${c('WHERE CAST(order_date AS date) = @day')} is easy and often “fine” on a small table. On a large one it can force a scan. Same rows, slower plan.</p></div>
+<h2>Showing a date in the result</h2>
+${sql(`SELECT order_id, CAST(order_date AS date) AS order_day, total_amount
+FROM Orders;`)}
+<p>Casting in SELECT is about the header you send. That does not hurt the filter.</p>`,
+  },
+  {
+    kind: 'guide', slug: 'cte-for-reports', name: 'CTEs for reports', lesson: 29,
+    title: 'CTEs in SQL Server: name a step so the report can be read',
+    short: 'WITH name AS (…): write the query in the order you think.',
+    description: 'How to use a CTE in SQL Server for workplace reports: last order per customer, then filter, without a nested mess.',
+    lede: 'A CTE is a named subquery at the top. You write the steps in the order a colleague can read them. SQL Server does not care; the next person does.',
+    body: () => `
+<h2>Last order date, then the quiet customers</h2>
+${sql(`WITH last_order AS (
+  SELECT customer_id, MAX(order_date) AS last_date
+  FROM Orders
+  GROUP BY customer_id
+)
+SELECT c.customer_id, c.first_name, c.last_name, lo.last_date
+FROM Customers c
+JOIN last_order lo ON lo.customer_id = c.customer_id
+WHERE lo.last_date < DATEADD(day, -90, CAST(GETDATE() AS date))
+ORDER BY lo.last_date;`)}
+<p>Read it top to bottom: build last order, join names, keep 90 days quiet. The same thing as a nested FROM, without the nest.</p>
+<div class="mistake"><b>A CTE is not a table</b>
+<p>It lives for one statement. The next query cannot see ${c('last_order')} unless you write the WITH again, or you make a real temp table / view.</p></div>
+<h2>When to use one</h2>
+<p>You need a result twice. You need to filter a ${c('ROW_NUMBER')}. You are about to nest three levels and you can still smell the fire drill. Start a CTE.</p>`,
+  },
+  {
+    kind: 'guide', slug: 'ssms-run-a-query', name: 'Run a query in SSMS', lesson: 1,
+    title: 'How to run a query in SSMS (F5, the selection, and the wrong database)',
+    short: 'Highlight the batch. Check the database dropdown. Then F5.',
+    description: 'How to execute T-SQL in SQL Server Management Studio: F5, Execute, highlighting a batch, and the wrong-database mistake.',
+    lede: 'SSMS will run whatever is in the window, or whatever you highlighted. The other classic is running it against master because the dropdown was not on the company database.',
+    body: () => `
+<h2>Execute</h2>
+<ul>
+<li>F5, or Ctrl+E, or the Execute button on the toolbar.</li>
+<li>Highlight a statement first if the file has more than one. SSMS runs the highlight, not the whole script.</li>
+<li>Results land in the grid. Messages is where row counts and errors go.</li>
+</ul>
+<h2>The database dropdown</h2>
+<p>Top left. If it says ${c('master')} and you query ${c('Orders')}, you get “Invalid object name”. Pick the database, or start the script with ${c('USE Harbour;')} (your real name, not ours).</p>
+${sql(`USE Harbour;
+GO
+SELECT TOP (20) order_id, order_date, total_amount
+FROM Orders
+ORDER BY order_date DESC;`)}
+<div class="mistake"><b>GO is not T-SQL</b>
+<p>${c('GO')} is an SSMS batch splitter. It is not a SQL Server keyword. Do not put it in a stored procedure or in an app. A blank line is enough between statements in a normal query.</p></div>
+<h2>Stop a runaway</h2>
+<p>The red square, or Alt+Break. If you forgot the WHERE on a big update, that is the button. We do not run updates on WorkSQL. At work, that is the one that matters.</p>`,
+  },
+  {
+    kind: 'guide', slug: 'between-dates-inclusive', name: 'BETWEEN dates', lesson: 5,
+    title: 'BETWEEN two dates in SQL Server: the inclusive trap',
+    short: 'BETWEEN includes both ends. A datetime end includes 00:00 that day only.',
+    description: 'Why BETWEEN start AND end is a trap on datetime columns in SQL Server, and the half-open range to use instead.',
+    lede: 'BETWEEN is inclusive on both sides. On a date column that is usually what you wanted. On a datetime, the end is midnight of that day, so almost the whole last day goes missing.',
+    body: () => `
+<h2>What people write</h2>
+${sql(`-- Looks like 1–31 October. Drops almost all of the 31st if order_date has a time.
+WHERE order_date BETWEEN '2026-10-01' AND '2026-10-31'`)}
+<p>${c("'2026-10-31'")} becomes ${c('2026-10-31 00:00:00')}. An order at 09:14 on the 31st is after that, so it is out.</p>
+<h2>The half-open range</h2>
+${sql(`WHERE order_date >= '2026-10-01'
+  AND order_date <  '2026-11-01'`)}
+<p>First moment of the 1st, up to but not including the 1st of next month. Every clock time on the 31st is in.</p>
+<div class="mistake"><b>BETWEEN and GETDATE()</b>
+<p>${c('BETWEEN DATEADD(day, -7, GETDATE()) AND GETDATE()')} has a time on both ends. You lose the start of the first day and you include this morning. Use midnight bounds instead. See <a href="/guides/last-week-orders">last week’s orders</a>.</p></div>`,
+  },
+  {
+    kind: 'guide', slug: 'email-the-numbers', name: 'Email the numbers', lesson: 5,
+    title: 'How to email last week’s numbers so your manager can use them',
+    short: 'Range in the subject. Columns they asked for. One total line.',
+    description: 'A workplace habit for SQL Server reports: put the date range in the subject, name the columns, and send one total they can check.',
+    lede: 'The query can be right and the email still useless. Managers paste. They do not want a novel. They want the range, the columns, and a total they can eyeball.',
+    body: () => `
+<h2>Subject line</h2>
+<p><em>Harbour orders Mon 20–Sun 26 Oct — 142 orders, £18,410</em></p>
+<p>If the range is in the subject, they do not have to ask whether today is included.</p>
+<h2>The result they can paste</h2>
+${sql(`SELECT order_id, order_date, customer_id, total_amount, status
+FROM Orders
+WHERE order_date >= '2026-10-20'
+  AND order_date <  '2026-10-27'
+ORDER BY order_date, order_id;`)}
+<p>Headers match the sheet. No ${c('SELECT *')}. Ordered so two people get the same first row.</p>
+<h2>The check total</h2>
+${sql(`SELECT COUNT(*) AS orders, SUM(total_amount) AS revenue
+FROM Orders
+WHERE order_date >= '2026-10-20'
+  AND order_date <  '2026-10-27';`)}
+<p>One row. If their pivot is £200 off, you both look at the same number first. Then you argue about cancelled orders, not about the query.</p>
+<div class="mistake"><b>Sending the query and no result</b>
+<p>Half the office cannot run it. Send the grid (or a CSV) and keep the SQL underneath for the person who will ask “how did you get this?”</p></div>`,
+  },
 ];
+
+const articles = core.concat(extra);
+
+const isGuide = (a) => a.kind === 'guide';
+const pathOf = (a) => isGuide(a) ? `/guides/${a.slug}` : `/tsql/${a.slug}`;
+const hubOf = (a) => isGuide(a) ? { href: '/guides', label: 'Guides' } : { href: '/tsql', label: 'T-SQL reference' };
 
 function page({ title, description, body, canonical }) {
   return `<!doctype html>
@@ -302,7 +608,11 @@ function page({ title, description, body, canonical }) {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${esc(title)}</title>
   <meta name="description" content="${esc(description)}">
-  ${canonical ? `<link rel="canonical" href="${esc(canonical)}">` : ''}
+  ${canonical ? `<link rel="canonical" href="${esc(canonical)}">
+  <meta property="og:title" content="${esc(title)}">
+  <meta property="og:description" content="${esc(description)}">
+  <meta property="og:url" content="${esc(canonical)}">
+  <meta property="og:type" content="article">` : ''}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
   <link rel="stylesheet" href="/css/app.css">
@@ -311,42 +621,85 @@ function page({ title, description, body, canonical }) {
   <header class="site-header" style="border-bottom:1px solid var(--line)">
     <nav class="nav">
       <a href="/" class="logo"><svg viewBox="0 0 32 32" fill="none" width="26" height="26"><ellipse cx="16" cy="7" rx="11" ry="4" fill="#1f5eff"/><path d="M5 7v18c0 2.2 4.9 4 11 4s11-1.8 11-4V7c0 2.2-4.9 4-11 4S5 9.2 5 7Z" fill="#1f5eff" opacity=".75"/></svg>WorkSQL</a>
-      <div class="nav-links"><a href="/tsql">T-SQL reference</a><a href="/lessons">Lessons</a><a href="/pricing">Pricing</a></div>
+      ${navInner(canonical)}
       <div class="nav-actions"><a href="/work" class="btn btn-primary">Clock in</a></div>
     </nav>
   </header>
   <main>${body}</main>
-  <footer class="footer"><div class="inner"><span>WorkSQL · SQL Server, five minutes.</span><div class="links"><a href="/work">Work mode</a><a href="/lessons">Lessons</a><a href="/tsql">T-SQL reference</a></div></div></footer>
+  <footer class="footer"><div class="inner"><span>WorkSQL · SQL Server, five minutes.</span><div class="links"><a href="/guides">Guides</a><a href="/tools">Free tools</a><a href="/convert">Convert</a><a href="/interview">Interview</a><a href="/tsql">T-SQL reference</a><a href="/work">Work mode</a></div></div></footer>
 </body>
 </html>`;
 }
 
 function renderArticle(a, lesson, origin) {
-  const others = articles.filter((x) => x !== a).slice(0, 5);
-  const ld = { '@context': 'https://schema.org', '@type': 'TechArticle', headline: a.title, description: a.description, proficiencyLevel: 'Beginner' };
-  const body = `<article class="article">
-    <div class="crumb"><a href="/tsql">T-SQL reference</a> › ${esc(a.name)}</div>
-    <h1>${esc(a.title)}</h1>
-    <p class="lede">${esc(a.lede)}</p>
-    ${a.body()}
-    <section class="try">
+  const hub = hubOf(a);
+  const others = articles.filter((x) => x !== a && isGuide(x) === isGuide(a)).slice(0, 5);
+  const ld = {
+    '@context': 'https://schema.org', '@type': isGuide(a) ? 'Article' : 'TechArticle',
+    headline: a.title, description: a.description, proficiencyLevel: 'Beginner',
+    datePublished: '2026-10-31', dateModified: '2026-10-31',
+    author: { '@type': 'Organization', name: 'WorkSQL' },
+    publisher: { '@type': 'Organization', name: 'WorkSQL', url: origin || 'https://worksql.com' },
+    mainEntityOfPage: origin ? `${origin}${pathOf(a)}` : undefined,
+  };
+  const tryIt = lesson
+    ? `<section class="try">
       <h2>Try it on Harbour &amp; Co</h2>
       <p>${esc(lesson.from.name)} (${esc(lesson.from.role)}) needs this now: “${esc(lesson.title)}” Write the query, run it, send the results. ${lesson.free ? 'Free.' : 'On the paid plan.'}</p>
       <a class="btn btn-primary" href="/lesson/${lesson.id}">Take the ticket →</a>
+    </section>`
+    : `<section class="try"><h2>Try it at the desk</h2><p>Monday is free. Clock in and write the query yourself.</p><a class="btn btn-primary" href="/work">Clock in</a></section>`;
+  const body = `<article class="article">
+    <div class="crumb"><a href="${hub.href}">${esc(hub.label)}</a> › ${esc(a.name)}</div>
+    <h1>${esc(a.title)}</h1>
+    <p class="lede">${esc(a.lede)}</p>
+    ${a.body()}
+    ${tryIt}
+    <section class="try" style="margin-top:16px">
+      <h2>Learn it on a real ticket</h2>
+      <p>Monday is free on WorkSQL. A colleague’s ticket lands, you write the T-SQL, we mark it. No videos. Five minutes.</p>
+      <a class="btn btn-primary" href="/work">Clock in free</a>
+      <a class="btn btn-ghost" href="/lessons" style="margin-left:8px">See Monday’s tickets</a>
     </section>
-    <div class="related">More: ${others.map((x) => `<a href="/tsql/${x.slug}">${esc(x.name)}</a>`).join('')}</div>
+    <div class="related">More: ${others.map((x) => `<a href="${pathOf(x)}">${esc(x.name)}</a>`).join('')}</div>
     <script type="application/ld+json">${JSON.stringify(ld).replace(/</g, '\\u003c')}</script>
   </article>`;
-  return page({ title: `${a.title} | WorkSQL`, description: a.description, body, canonical: origin && `${origin}/tsql/${a.slug}` });
+  return page({ title: `${a.title} | WorkSQL`, description: a.description, body, canonical: origin && `${origin}${pathOf(a)}` });
 }
 
 function renderIndex(origin) {
+  const refs = articles.filter((a) => !isGuide(a));
   const body = `<article class="article">
     <h1>T-SQL reference</h1>
-    <p class="lede">Short answers to the SQL Server questions people search for at work. Each one ends with a ticket you can try it on.</p>
-    <div class="ref-links">${articles.map((a) => `<a class="ref-link" href="/tsql/${a.slug}"><b>${esc(a.name)}</b><span>${esc(a.short)}</span></a>`).join('')}</div>
+    <p class="lede">Short answers to the SQL Server functions people search for at work. Each one ends with a ticket you can try it on. For the “James needs last week” kind of job, see <a href="/guides">Guides</a>.</p>
+    ${catalogSearch({ placeholder: 'GETDATE, DATEADD, CASE, ROW_NUMBER…', total: refs.length, noun: 'pages' })}
+    <div class="ref-links">${refs.map((a) => `<a class="ref-link" href="${pathOf(a)}" data-search="${searchBits(a.name + ' ' + a.title + ' ' + a.short + ' ' + a.slug)}"><b>${esc(a.name)}</b><span>${esc(a.short)}</span></a>`).join('')}</div>
   </article>`;
   return page({ title: 'T-SQL reference: SQL Server functions explained | WorkSQL', description: 'Plain-English SQL Server reference: GETDATE, DATEADD, DATEDIFF, ISNULL, TOP, CASE, LEFT JOIN, ROW_NUMBER, grouping by month and the GROUP BY error.', body, canonical: origin && `${origin}/tsql` });
 }
 
-module.exports = { articles, renderArticle, renderIndex };
+function renderGuides(origin) {
+  const card = (a) => `<a class="ref-link" href="${pathOf(a)}" data-search="${searchBits(a.name + ' ' + a.title + ' ' + a.short + ' ' + a.slug)}"><b>${esc(a.name)}</b><span>${esc(a.short)}</span></a>`;
+  const guides = articles.filter(isGuide);
+  const refs = articles.filter((a) => !isGuide(a));
+  const body = `<article class="article">
+    <h1>SQL Server guides</h1>
+    <p class="lede">Joins, dates, types, and the tickets people get at work. Search, or scroll. Each page has a worked example in plain English. Free in-browser <a href="/tools">T-SQL tools</a> sit next door — formatter, schema diagrams, CASE, PIVOT, IN-list.</p>
+    ${catalogSearch({ placeholder: 'LEFT JOIN, age, CAST, yesterday…', total: articles.length, noun: 'pages' })}
+    <h2>At work</h2>
+    <div class="ref-links" id="guides">${guides.map(card).join('')}</div>
+    <h2>Functions and types</h2>
+    <div class="ref-links" id="refs">${refs.map(card).join('')}</div>
+  </article>`;
+  return page({ title: 'SQL Server guides for work | WorkSQL', description: 'Searchable SQL Server guides: LEFT JOIN, RIGHT JOIN, age from a date, CAST, GROUP BY, and the workplace queries people actually send.', body, canonical: origin && `${origin}/guides` });
+}
+
+function sitemapPaths() {
+  return ['/', '/work', '/lessons', '/pricing', '/guides', '/tsql', ...articles.map(pathOf)];
+}
+
+function listing(a) {
+  return { slug: a.slug, name: a.name, short: a.short, kind: isGuide(a) ? 'guide' : 'ref', href: pathOf(a) };
+}
+
+module.exports = { articles, renderArticle, renderIndex, renderGuides, pathOf, sitemapPaths, listing, page };

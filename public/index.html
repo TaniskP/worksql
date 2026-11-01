@@ -16,11 +16,24 @@
       <nav class="nav">
         <a href="/" class="logo" data-logo>WorkSQL</a>
         <div class="nav-links">
-          <a href="#shift">How a shift works</a>
+          <a href="/guides">Guides</a>
+          <a href="/tools">Free tools</a>
+          <a href="/convert">Convert</a>
+          <a href="/interview">Interview</a>
           <a href="/lessons">Lessons</a>
-          <a href="/tsql">T-SQL reference</a>
-          <a href="#pricing">Pricing</a>
+          <a href="/pricing">Pricing</a>
         </div>
+        <details class="nav-more">
+          <summary>Menu</summary>
+          <div class="nav-more-list">
+            <a href="/guides">Guides</a>
+            <a href="/tools">Free tools</a>
+            <a href="/convert">Convert</a>
+            <a href="/interview">Interview</a>
+            <a href="/lessons">Lessons</a>
+            <a href="/pricing">Pricing</a>
+          </div>
+        </details>
         <div class="nav-actions">
           <a href="/work" class="btn btn-primary" data-clockin>Clock in</a>
         </div>
@@ -30,12 +43,20 @@
     <div class="hero-body">
       <div class="hero-eyebrow"><span class="dot"></span> Harbour &amp; Co · <span id="hero-clock">09:14</span> · 1 new message</div>
       <h1>Clock in.<span class="blue">James needs last week’s</span><span class="blue">orders by ten.</span></h1>
-      <p class="lead">SQL Server, five minutes. You write the query. We tell you if it’s right. No videos to zone out in front of: a ticket lands, you type, you send it back.</p>
+      <p class="lead">SQL Server, five minutes. You write the query. We tell you if it’s right. No videos: a ticket lands — one short job from a colleague, like James needing last week’s orders — you type, you send it back.</p>
       <div class="hero-ctas">
         <a href="/work" class="btn btn-primary btn-lg" data-clockin>Clock in free <span data-icon="arrow"></span></a>
         <a href="/lessons" class="btn btn-ghost btn-lg">Learn step by step first</a>
       </div>
       <div class="small">No sign-up. Monday’s shift is free.</div>
+
+      <div class="hero-search" id="hero-search">
+        <form class="hero-find" role="search" action="/guides" method="get">
+          <label class="visually-hidden" for="find">Find a tool, guide, or converter</label>
+          <input id="find" name="q" type="search" placeholder="Find a tool, guide, or converter…" autocomplete="off">
+        </form>
+        <div class="hero-find-drop" id="find-drop" hidden></div>
+      </div>
 
       <div class="hero-points">
         <div><span data-icon="bolt"></span>You type,<br>every ticket</div>
@@ -49,7 +70,10 @@
     <div class="section-head">
       <div class="eyebrow">How a shift works</div>
       <h2>One ticket, start to finish.</h2>
-      <p>A message comes in. You write the query. You send the results. If it’s wrong, they tell you what’s wrong, the way a colleague would. If it’s right, the next one lands.</p>
+      <p>A ticket is the unit of this app. A colleague asks for a result. You write the T-SQL in a window that looks like SSMS. We mark it the way they would — not four multiple-choice options. If it’s right, the next one lands.</p>
+      <aside class="ticket-what">
+        <p><b>What a ticket is worth.</b> At work it is the inbox item: last week’s orders by ten, returns that don’t match, a JOIN that doubled the total. Here it is the same thing — one request, one query, a mark. Five minutes. The value is you type every time, until the habit is there. Monday’s shift is free.</p>
+      </aside>
     </div>
 
     <div class="demo" id="demo" aria-label="Animated demo: one ticket from inbox to reply"></div>
@@ -90,6 +114,16 @@
 
   <section class="section">
     <div class="section-head">
+      <div class="eyebrow">Guides</div>
+      <h2>SQL Server the way work asks for it</h2>
+      <p>Last week, yesterday, SELECT *, a JOIN that doubled the total. Short pages you can send a colleague.</p>
+    </div>
+    <div class="ref-links" id="guide-links"></div>
+    <p class="pricing-note"><a href="/guides">All workplace guides</a> · <a href="/tools">Free T-SQL tools</a> · <a href="/convert">Excel / Pandas / dialects</a> · <a href="/interview">Interview sandbox</a></p>
+  </section>
+
+  <section class="section band">
+    <div class="section-head">
       <div class="eyebrow">T-SQL reference</div>
       <h2>Looking something up?</h2>
       <p>Short pages on the SQL Server functions people search for at work, each with a ticket to try it on.</p>
@@ -101,7 +135,7 @@
     <div class="inner">
       <a href="/" class="logo" data-logo style="font-size:16px">WorkSQL</a>
       <span>SQL Server, five minutes.</span>
-      <div class="links"><a href="/work">Work mode</a><a href="/lessons">Lessons</a><a href="/tsql">T-SQL reference</a><a href="/pricing">Pricing</a></div>
+      <div class="links"><a href="/work">Work mode</a><a href="/guides">Guides</a><a href="/tools">Free tools</a><a href="/convert">Convert</a><a href="/interview">Interview</a><a href="/tsql">T-SQL reference</a><a href="/pricing">Pricing</a></div>
     </div>
   </footer>
 
@@ -134,9 +168,37 @@
     });
 
     fetch('/api/articles').then((r) => r.json()).then(({ articles }) => {
-      document.getElementById('ref-links').innerHTML = articles.map((a) =>
-        `<a class="ref-link" href="/tsql/${a.slug}"><b>${esc(a.name)}</b><span>${esc(a.short)}</span></a>`).join('');
+      const card = (a) => `<a class="ref-link" href="${esc(a.href)}"><b>${esc(a.name)}</b><span>${esc(a.short)}</span></a>`;
+      document.getElementById('guide-links').innerHTML = articles.filter((a) => a.kind === 'guide').map(card).join('');
+      document.getElementById('ref-links').innerHTML = articles.filter((a) => a.kind !== 'guide').map(card).join('');
     });
+
+    const find = document.getElementById('find');
+    const drop = document.getElementById('find-drop');
+    let catalog = [];
+    fetch('/api/lookup').then((r) => r.json()).then(({ items }) => {
+      catalog = items || [];
+      if (find.value.trim()) paint(find.value);
+    });
+    const paint = (q) => {
+      const s = (q || '').trim().toLowerCase();
+      if (!s) { drop.hidden = true; drop.innerHTML = ''; return; }
+      const hits = catalog.filter((it) => it.search.includes(s)).slice(0, 8);
+      drop.hidden = false;
+      if (!hits.length) {
+        drop.innerHTML = '<p class="hero-find-empty">Nothing matches. Try VLOOKUP, LEFT JOIN, or formatter.</p>';
+        return;
+      }
+      drop.innerHTML = hits.map((it) => `<a href="${esc(it.href)}"><span class="kind">${esc(it.kind)}</span><b>${esc(it.name)}</b><span>${esc(it.short)}</span></a>`).join('');
+    };
+    find.addEventListener('input', () => paint(find.value));
+    find.addEventListener('focus', () => { if (find.value.trim()) paint(find.value); });
+    find.closest('form').addEventListener('submit', (e) => {
+      const first = drop.querySelector('a');
+      if (first) { e.preventDefault(); location.href = first.href; }
+    });
+    document.addEventListener('click', (e) => { if (!e.target.closest('#hero-search')) drop.hidden = true; });
+    find.addEventListener('keydown', (e) => { if (e.key === 'Escape') { drop.hidden = true; find.blur(); } });
   </script>
   <script type="module" src="/js/demo.js"></script>
 </body>

@@ -1,0 +1,38 @@
+const assert = require('node:assert');
+const { excel, pandas, dialects, interview, hubPaths, matchHub, renderConvert } = require('../src/hubs');
+
+assert.ok(excel.length >= 30, `${excel.length} excel pages`);
+assert.ok(pandas.length >= 20, `${pandas.length} pandas pages`);
+assert.ok(dialects.length >= 8, `${dialects.length} dialect pages`);
+assert.ok(interview.length >= 20, `${interview.length} interview pages`);
+const paths = hubPaths();
+assert.ok(paths.length >= 100, `${paths.length} hub paths`);
+assert.ok(paths.includes('/excel-to-sql/vlookup'));
+assert.ok(paths.includes('/excel-to-sql/xlookup'));
+assert.ok(paths.includes('/excel-to-sql/countif'));
+assert.ok(paths.includes('/excel-to-sql/sumproduct'));
+assert.ok(paths.includes('/pandas-to-sql/merge'));
+assert.ok(paths.includes('/pandas-to-sql/groupby'));
+assert.ok(paths.includes('/pandas-to-sql/fillna'));
+assert.ok(paths.includes('/pandas-to-sql/drop-duplicates'));
+assert.ok(paths.includes('/pandas-to-sql/loc'));
+assert.ok(paths.includes('/sql-translator/mysql-to-tsql'));
+assert.ok(paths.includes('/sql-translator/postgresql-to-tsql'));
+assert.ok(paths.includes('/sql-translator/oracle-to-tsql'));
+assert.ok(paths.includes('/sql-translator/snowflake-to-tsql'));
+assert.ok(paths.includes('/interview/top-n-per-group'));
+const index = renderConvert('https://worksql.com');
+assert.ok(index.includes('rel="canonical" href="https://worksql.com/convert"'));
+for (const p of paths) {
+  const html = matchHub(p, 'https://worksql.com');
+  assert.ok(html && html.includes('Clock in free'), p);
+  assert.ok(html.includes(`href="https://worksql.com${p}"`), p);
+}
+const v = matchHub('/excel-to-sql/vlookup', 'https://worksql.com');
+assert.ok(v.includes('LEFT JOIN'));
+assert.ok(v.includes('/js/hubs.js'));
+const my = matchHub('/sql-translator/mysql-to-tsql', 'https://worksql.com');
+assert.ok(my.includes('LIMIT'));
+const iv = matchHub('/interview/top-n-per-group', 'https://worksql.com');
+assert.ok(iv.includes('ROW_NUMBER'));
+console.log(`hubs: ${paths.length} pages ok (${excel.length} excel, ${pandas.length} pandas, ${dialects.length} dialect, ${interview.length} interview)`);

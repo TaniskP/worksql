@@ -14,7 +14,10 @@ const session = require('./src/session');
 const members = require('./src/members');
 const { canRun, devUnlockAllowed, DEV_EMAIL } = require('./src/access');
 const restore = require('./src/restore');
-const { articles, renderArticle, renderIndex } = require('./src/articles');
+const { articles, renderArticle, renderIndex, renderGuides, pathOf, sitemapPaths, listing: articleListing } = require('./src/articles');
+const { tools, renderTools, renderTool, toolPaths } = require('./src/tools');
+const { matchHub, hubPaths } = require('./src/hubs');
+const { lookup } = require('./src/lookup');
 
 const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC = path.join(__dirname, 'public');
@@ -169,7 +172,11 @@ async function api(req, res, url) {
   if (req.method === 'GET' && p === '/api/site') return send(res, 200, site);
 
   if (req.method === 'GET' && p === '/api/articles') {
-    return send(res, 200, { articles: articles.map(({ slug, name, short }) => ({ slug, name, short })) });
+    return send(res, 200, { articles: articles.map(articleListing) });
+  }
+
+  if (req.method === 'GET' && p === '/api/lookup') {
+    return send(res, 200, { items: lookup() });
   }
 
   if (req.method === 'POST' && p === '/api/nudge') {
@@ -195,17 +202,42 @@ function sendHtml(res, status, html) {
 function seoRoutes(req, res, url) {
   const p = url.pathname.replace(/\/+$/, '') || '/';
   if (p === '/tsql') return sendHtml(res, 200, renderIndex(originOf(req))), true;
+  if (p === '/guides') return sendHtml(res, 200, renderGuides(originOf(req))), true;
+  if (p === '/tools') return sendHtml(res, 200, renderTools(originOf(req))), true;
+  const hubHtml = matchHub(p, originOf(req));
+  if (hubHtml) return sendHtml(res, 200, hubHtml), true;
+  const toolPage = p.match(/^\/tools\/([a-z0-9-]+)$/);
+  if (toolPage) {
+    const t = tools.find((x) => x.slug === toolPage[1]);
+    if (!t) return false;
+    return sendHtml(res, 200, renderTool(t, originOf(req))), true;
+  }
+  const guide = p.match(/^\/guides\/([a-z0-9-]+)$/);
+  if (guide) {
+    const a = articles.find((x) => x.slug === guide[1] && x.kind === 'guide');
+    if (!a) {
+      const other = articles.find((x) => x.slug === guide[1]);
+      if (other) { res.writeHead(301, { Location: pathOf(other) }); res.end(); return true; }
+      return false;
+    }
+    return sendHtml(res, 200, renderArticle(a, lessons.find((l) => l.id === a.lesson), originOf(req))), true;
+  }
   const m = p.match(/^\/tsql\/([a-z0-9-]+)$/);
   if (m) {
-    const a = articles.find((x) => x.slug === m[1]);
-    if (!a) return false;
+    const a = articles.find((x) => x.slug === m[1] && x.kind !== 'guide');
+    if (!a) {
+      const other = articles.find((x) => x.slug === m[1]);
+      if (other) { res.writeHead(301, { Location: pathOf(other) }); res.end(); return true; }
+      return false;
+    }
     return sendHtml(res, 200, renderArticle(a, lessons.find((l) => l.id === a.lesson), originOf(req))), true;
   }
   if (p === '/sitemap.xml') {
     const o = originOf(req);
-    const urls = ['/', '/work', '/lessons', '/pricing', '/tsql', ...articles.map((a) => `/tsql/${a.slug}`)];
+    const day = '2026-11-01';
+    const urls = [...sitemapPaths(), ...toolPaths(), ...hubPaths()];
     res.writeHead(200, { 'Content-Type': 'application/xml; charset=utf-8' });
-    res.end(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((u) => `  <url><loc>${o}${u}</loc></url>`).join('\n')}\n</urlset>\n`);
+    res.end(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((u) => `  <url><loc>${o}${u}</loc><lastmod>${day}</lastmod></url>`).join('\n')}\n</urlset>\n`);
     return true;
   }
   if (p === '/robots.txt') {

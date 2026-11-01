@@ -1,0 +1,341 @@
+// One crawlable page per Excel function → T-SQL. Widgets run in /js/hubs.js.
+const x = (slug, name, title, short, description, lede, sample, tsql, note) =>
+  ({ slug, name, title, short, description, lede, sample, tsql, note });
+
+module.exports = [
+  x('vlookup', 'VLOOKUP', 'VLOOKUP to SQL Server LEFT JOIN',
+    'The lookup column is a JOIN key, not a range.',
+    'Convert Excel VLOOKUP to SQL Server LEFT JOIN. Paste a VLOOKUP, copy the T-SQL.',
+    'VLOOKUP walks a range. SQL joins a table. Same idea: match a key, bring a column back.',
+    '=VLOOKUP(A2, Customers!A:C, 3, FALSE)',
+    `SELECT t.order_id, t.customer_id, c.last_name
+FROM Orders t
+LEFT JOIN Customers c ON c.customer_id = t.customer_id;`,
+    'FALSE (exact) is an INNER or LEFT JOIN. TRUE (range) is a BETWEEN against a band table — do not fake it with LIKE.'),
+  x('xlookup', 'XLOOKUP', 'XLOOKUP to SQL Server JOIN',
+    'XLOOKUP is VLOOKUP that can look left. In SQL that is still a JOIN.',
+    'Translate Excel XLOOKUP to T-SQL JOIN. Exact match becomes ON, if_not_found becomes ISNULL.',
+    'XLOOKUP can return a column to the left of the key. SQL does not care about column order. Join on the key.',
+    '=XLOOKUP(A2, Customers!B:B, Customers!A:A, "Missing")',
+    `SELECT t.email, ISNULL(c.customer_id, 'Missing') AS customer_id
+FROM Tickets t
+LEFT JOIN Customers c ON c.email = t.email;`,
+    'if_not_found is ISNULL or COALESCE on the joined column. Arrays of return columns are extra SELECT list items.'),
+  x('if', 'IF', 'Excel IF to SQL CASE WHEN',
+    'IF(test, a, b) is CASE WHEN test THEN a ELSE b END.',
+    'Convert Excel IF to T-SQL CASE WHEN. Nested IFs become stacked WHEN clauses.',
+    'A spreadsheet IF is a CASE. Nested IFs are just more WHENs. Do not nest CASE inside CASE unless you must.',
+    '=IF(B2>10000,"Tier 1",IF(B2>1000,"Tier 2","Other"))',
+    `CASE
+  WHEN total_amount > 10000 THEN 'Tier 1'
+  WHEN total_amount > 1000 THEN 'Tier 2'
+  ELSE 'Other'
+END AS tier`,
+    'SQL Server also has IIF(test, a, b). Fine for one test. Three bands belong in CASE.'),
+  x('iferror', 'IFERROR', 'IFERROR to TRY_CONVERT / ISNULL',
+    'Excel swallows #N/A. SQL uses TRY_CONVERT or a LEFT JOIN.',
+    'Replace Excel IFERROR with SQL Server TRY_CONVERT, TRY_CAST, or ISNULL after a LEFT JOIN.',
+    'IFERROR is “if this blows up, use that.” In T-SQL the blow-up is a convert or a missing join.',
+    '=IFERROR(VALUE(A2),0)',
+    `ISNULL(TRY_CONVERT(int, raw_code), 0)`,
+    'TRY_CONVERT returns NULL on junk. ISNULL turns that into your fallback. Do not use CONVERT alone on dirty client files.'),
+  x('ifna', 'IFNA', 'IFNA to LEFT JOIN and ISNULL',
+    'IFNA is IFERROR for #N/A only. In SQL that is a missed JOIN.',
+    'Convert Excel IFNA to T-SQL ISNULL after a LEFT JOIN when the lookup misses.',
+    '#N/A in a lookup is a row that did not match. LEFT JOIN + ISNULL is the whole translation.',
+    '=IFNA(VLOOKUP(A2, Customers!A:B, 2, FALSE),"Unknown")',
+    `SELECT t.customer_id, ISNULL(c.first_name, 'Unknown') AS first_name
+FROM Tickets t
+LEFT JOIN Customers c ON c.customer_id = t.customer_id;`,
+    'An INNER JOIN drops the miss. That is not IFNA — that is a filter.'),
+  x('ifs', 'IFS', 'Excel IFS to stacked CASE WHEN',
+    'IFS(t1,a,t2,b) is CASE with two WHENs.',
+    'Translate Excel IFS into a SQL Server CASE WHEN block. First true test wins, same as IFS.',
+    'IFS is CASE with the ELSE left off. First match wins. Write the tightest test first if they overlap.',
+    '=IFS(B2>=10000,"A",B2>=1000,"B",TRUE,"C")',
+    `CASE
+  WHEN total_amount >= 10000 THEN 'A'
+  WHEN total_amount >= 1000 THEN 'B'
+  ELSE 'C'
+END`,
+    'TRUE as a last IFS test is ELSE.'),
+  x('countif', 'COUNTIF', 'COUNTIF to SQL COUNT CASE / SUM',
+    'COUNTIF(range, crit) is SUM(CASE WHEN crit THEN 1 ELSE 0 END) or a filtered COUNT(*).',
+    'Convert Excel COUNTIF to T-SQL. One criterion is a WHERE. Several columns stay on one row with CASE.',
+    'If the answer is one number, filter and COUNT(*). If you need a count per row in a report, use SUM(CASE…).',
+    '=COUNTIF(C:C,"Shipped")',
+    `SELECT COUNT(*) FROM Orders WHERE status = 'Shipped';
+
+-- or on a grouped report
+SELECT customer_id,
+       SUM(CASE WHEN status = 'Shipped' THEN 1 ELSE 0 END) AS shipped
+FROM Orders
+GROUP BY customer_id;`,
+    'Wildcards: COUNTIF "*co.uk" is LIKE \'%co.uk\'.'),
+  x('countifs', 'COUNTIFS', 'COUNTIFS to SQL WHERE with AND',
+    'Extra criteria are extra ANDs, not extra functions.',
+    'Translate Excel COUNTIFS to T-SQL COUNT(*) with AND filters, or SUM of a CASE with AND.',
+    'COUNTIFS is one COUNT with every test in the WHERE (or in the CASE).',
+    '=COUNTIFS(C:C,"Shipped",D:D,">=2026-01-01")',
+    `SELECT COUNT(*)
+FROM Orders
+WHERE status = 'Shipped'
+  AND order_date >= '2026-01-01';`,
+    'Do not write two COUNTs and subtract. One pass.'),
+  x('sumif', 'SUMIF', 'SUMIF to SQL SUM and CASE',
+    'SUMIF(range, crit, sum_range) is SUM(CASE WHEN crit THEN amount END).',
+    'Convert Excel SUMIF to T-SQL SUM with a WHERE, or SUM(CASE) when you need several totals on one row.',
+    'Same split as COUNTIF: one total → WHERE. Several totals across columns → CASE.',
+    '=SUMIF(C:C,"Shipped",E:E)',
+    `SELECT SUM(total_amount) FROM Orders WHERE status = 'Shipped';
+
+SELECT SUM(CASE WHEN status = 'Shipped' THEN total_amount ELSE 0 END) AS shipped_sales
+FROM Orders;`,
+    'ELSE 0 keeps the SUM from going NULL when nothing matches.'),
+  x('sumifs', 'SUMIFS', 'SUMIFS to SQL SUM with AND',
+    'SUMIFS adds ANDs. The sum column comes first in Excel; in SQL it is just SUM(col).',
+    'Translate Excel SUMIFS into T-SQL SUM with multiple AND filters.',
+    'Excel puts the sum range first. SQL does not. Write SUM(amount) and list the tests in WHERE.',
+    '=SUMIFS(E:E,C:C,"Shipped",B:B,A2)',
+    `SELECT SUM(total_amount)
+FROM Orders
+WHERE status = 'Shipped'
+  AND customer_id = @customer_id;`,
+    'Per customer is GROUP BY customer_id, not a copy-pasted SUMIFS down a sheet.'),
+  x('averageif', 'AVERAGEIF', 'AVERAGEIF to SQL AVG',
+    'AVERAGEIF is AVG with a WHERE, or AVG(CASE…).',
+    'Convert Excel AVERAGEIF to SQL Server AVG. Empty sets come back NULL, not #DIV/0!.',
+    'AVG ignores NULL. A CASE that returns NULL on the miss is the same as a filter.',
+    '=AVERAGEIF(C:C,"Shipped",E:E)',
+    `SELECT AVG(total_amount) FROM Orders WHERE status = 'Shipped';`,
+    'SQL will not shout #DIV/0!. NULL means “no rows”. Wrap with ISNULL if the sheet must show 0.'),
+  x('sumproduct', 'SUMPRODUCT', 'SUMPRODUCT to SQL SUM of products',
+    'SUMPRODUCT is SUM(a * b), often with boolean tests coerced to 1/0.',
+    'Replace Excel SUMPRODUCT with T-SQL SUM(col1 * col2) or SUM of a CASE that encodes the tests.',
+    'Most workplace SUMPRODUCTs are SUMIFS in a trench coat. The honest ones multiply two columns.',
+    '=SUMPRODUCT((C:C="Shipped")*(E:E))',
+    `SELECT SUM(CASE WHEN status = 'Shipped' THEN total_amount ELSE 0 END)
+FROM Orders;
+
+-- actual product of two columns
+SELECT SUM(qty * unit_price) FROM OrderLines;`,
+    'Do not multiply whole columns in SQL. That is a CROSS JOIN of the sheet against itself.'),
+  x('concatenate', 'CONCATENATE', 'CONCATENATE to SQL CONCAT',
+    'CONCATENATE(a,b) is CONCAT(a, b). Plus dies on NULL.',
+    'Convert Excel CONCATENATE to SQL Server CONCAT. CONCAT skips NULL; + does not.',
+    'Glue first name and last name with CONCAT. A NULL middle name will blank the whole + expression.',
+    '=CONCATENATE(A2," ",B2)',
+    `CONCAT(first_name, ' ', last_name)`,
+    'CONCAT_WS is not in older SQL Server. CONCAT plus an explicit separator is portable.'),
+  x('concat', 'CONCAT', 'Excel CONCAT to T-SQL CONCAT',
+    'Same function name. Watch NULL and the separator.',
+    'Excel CONCAT and SQL Server CONCAT. How they treat blanks and how to put a space in.',
+    'The names match. The NULL rules do not always. Test a NULL middle name once.',
+    '=CONCAT(A2," ",B2)',
+    `CONCAT(first_name, ' ', last_name)`,
+    'A trailing space when last_name is NULL: wrap parts in NULLIF or use a CASE.'),
+  x('textjoin', 'TEXTJOIN', 'TEXTJOIN to STRING_AGG',
+    'TEXTJOIN(delim, ignore_empty, range) is STRING_AGG with a WHERE.',
+    'Convert Excel TEXTJOIN to SQL Server STRING_AGG. One group, one delimiter.',
+    'TEXTJOIN down a column is STRING_AGG. ignore_empty is WHERE col IS NOT NULL AND col <> \'\.',
+    '=TEXTJOIN(", ",TRUE,C2:C20)',
+    `SELECT customer_id, STRING_AGG(sku, ', ') AS skus
+FROM OrderLines
+WHERE sku IS NOT NULL AND sku <> ''
+GROUP BY customer_id;`,
+    'STRING_AGG needs 2017+. Older servers: the FOR XML PATH trick.'),
+  x('left', 'LEFT', 'Excel LEFT to SQL LEFT',
+    'LEFT(text, n) is LEFT(col, n). Same word.',
+    'Excel LEFT to SQL Server LEFT. Use it for postcode outward codes, not for dates.',
+    'The first four of a UK postcode is LEFT(postcode, 4) after you TRIM.',
+    '=LEFT(A2,4)',
+    `LEFT(LTRIM(RTRIM(postcode)), 4)`,
+    'Do not LEFT a datetime to get a year. Use YEAR() or a range. LEFT on a date is a format accident.'),
+  x('right', 'RIGHT', 'Excel RIGHT to SQL RIGHT',
+    'RIGHT(text, n) is RIGHT(col, n).',
+    'Convert Excel RIGHT to SQL Server RIGHT. Last four of a card, last two of a year string.',
+    'Same function. Watch trailing spaces — TRIM first.',
+    '=RIGHT(A2,4)',
+    `RIGHT(LTRIM(RTRIM(phone)), 4)`,
+    'For “last 4 of an identifier that might be short”, LEN and a CASE beat a blind RIGHT.'),
+  x('mid', 'MID', 'Excel MID to SUBSTRING',
+    'MID(text, start, n) is SUBSTRING(col, start, n).',
+    'Translate Excel MID to SQL Server SUBSTRING. Start is 1-based in both.',
+    'SQL Server does not have MID. It has SUBSTRING. Start at 1, not 0.',
+    '=MID(A2,4,2)',
+    `SUBSTRING(order_ref, 4, 2)`,
+    'CHARINDEX finds the start when the position is not fixed.'),
+  x('len', 'LEN', 'Excel LEN to SQL LEN',
+    'LEN(text) is LEN(col). Trailing spaces are ignored in T-SQL LEN.',
+    'Excel LEN vs SQL Server LEN. Trailing spaces vanish in LEN; DATALENGTH counts them.',
+    'LEN(\'abc  \') is 3 in SQL Server. If you need the spaces, DATALENGTH (and divide by 2 for nvarchar).',
+    '=LEN(A2)',
+    `LEN(email)
+-- trailing spaces
+DATALENGTH(email) / 2  -- nvarchar`,
+    'Blank vs NULL: LEN(NULL) is NULL. LEN(\'\') is 0.'),
+  x('trim', 'TRIM', 'Excel TRIM to TRIM / LTRIM RTRIM',
+    'TRIM is TRIM on 2017+, LTRIM(RTRIM()) on older boxes.',
+    'Convert Excel TRIM to SQL Server TRIM or LTRIM(RTRIM). Internal double spaces need REPLACE.',
+    'Excel TRIM also collapses internal double spaces. SQL TRIM only hits the ends.',
+    '=TRIM(A2)',
+    `LTRIM(RTRIM(email))
+-- also squash double spaces
+REPLACE(LTRIM(RTRIM(email)), '  ', ' ')`,
+    'Run REPLACE twice if the sheet had triple spaces.'),
+  x('upper', 'UPPER', 'Excel UPPER to SQL UPPER',
+    'UPPER(text) is UPPER(col).',
+    'Excel UPPER to SQL Server UPPER. Use it to compare, not to store, unless the column is a code.',
+    'Comparing LOWER(a) = LOWER(b) is a scan. Better: store consistently, or a persisted computed column.',
+    '=UPPER(A2)',
+    `UPPER(sku)`,
+    'A leading UPPER() in a WHERE is not SARGable. Match the stored case or use a computed column.'),
+  x('lower', 'LOWER', 'Excel LOWER to SQL LOWER',
+    'LOWER(text) is LOWER(col).',
+    'Convert Excel LOWER to SQL Server LOWER.',
+    'Same warning as UPPER. Do not wrap the column in a WHERE if you want a seek.',
+    '=LOWER(A2)',
+    `LOWER(email)`,
+    'Emails: store lower, compare lower. Do not LOWER() a million-row column on every report.'),
+  x('proper', 'PROPER', 'Excel PROPER — no T-SQL twin',
+    'SQL Server has no PROPER. You write it, or you do it in the app.',
+    'Excel PROPER case in SQL Server: there is no built-in. Patterns with UPPER/LOWER and a tally, or clean it before load.',
+    'PROPER is a spreadsheet luxury. T-SQL will not title-case a name for you in one function.',
+    '=PROPER(A2)',
+    `-- Honest version: clean in the app, or
+UPPER(LEFT(first_name, 1)) + LOWER(SUBSTRING(first_name, 2, 200))
+-- misses McDonald and hyphenated names`,
+    'Do not ship a 40-line scalar function for names. Fix the load.'),
+  x('find', 'FIND', 'Excel FIND to CHARINDEX',
+    'FIND is case-sensitive. CHARINDEX follows collation.',
+    'Convert Excel FIND to SQL Server CHARINDEX. 0 means not found, not #VALUE!.',
+    'FIND("@" , A2) is CHARINDEX(\'@\', email). SQL returns 0 when it is missing.',
+    '=FIND("@",A2)',
+    `CHARINDEX('@', email)  -- 0 if missing`,
+    'Excel #VALUE! on a miss. SQL 0. Wrap with NULLIF(..., 0) if you want NULL.'),
+  x('search', 'SEARCH', 'Excel SEARCH to CHARINDEX',
+    'SEARCH is case-insensitive FIND. CHARINDEX plus a CI collation.',
+    'Translate Excel SEARCH to SQL Server CHARINDEX. Case folding depends on the column collation.',
+    'Most Harbour columns are CI. CHARINDEX then behaves like SEARCH.',
+    '=SEARCH("ltd",A2)',
+    `CHARINDEX('ltd', company_name)`,
+    'A CS collation makes CHARINDEX behave like FIND. Check the column.'),
+  x('substitute', 'SUBSTITUTE', 'SUBSTITUTE to REPLACE',
+    'SUBSTITUTE(text, old, new) is REPLACE(col, old, new).',
+    'Convert Excel SUBSTITUTE to SQL Server REPLACE. All occurrences, unless you write a loop.',
+    'REPLACE replaces every match. Excel SUBSTITUTE can take an instance number. T-SQL does not.',
+    '=SUBSTITUTE(A2," ","")',
+    `REPLACE(postcode, ' ', '')`,
+    'Nth occurrence only: you need more than REPLACE. Usually you wanted all of them.'),
+  x('text', 'TEXT', 'Excel TEXT to CONVERT / FORMAT',
+    'TEXT(d,"yyyy-mm-dd") is CONVERT(varchar, d, 23) or FORMAT.',
+    'Replace Excel TEXT formats with SQL Server CONVERT styles or FORMAT. Prefer CONVERT in a WHERE.',
+    'FORMAT is readable and slow in a filter. CONVERT style 23 is yyyy-mm-dd.',
+    '=TEXT(A2,"yyyy-mm-dd")',
+    `CONVERT(char(10), order_date, 23)
+-- pretty, not for WHERE
+FORMAT(order_date, 'yyyy-MM-dd')`,
+    'Style 103 is British dd/mm/yyyy. See /tools/datetime-matrix.'),
+  x('value', 'VALUE', 'Excel VALUE to TRY_CONVERT',
+    'VALUE(text) is TRY_CONVERT(decimal, col). Junk becomes NULL, not #VALUE!.',
+    'Convert Excel VALUE to SQL Server TRY_CONVERT. Never CONVERT dirty client amounts.',
+    'Client files put £ and commas in a “number” column. TRY_CONVERT, then clean.',
+    '=VALUE(A2)',
+    `TRY_CONVERT(decimal(12,2), REPLACE(REPLACE(raw_amount, '£', ''), ',', ''))`,
+    'CONVERT on junk fails the batch. TRY_CONVERT returns NULL and you keep the rest of the rows.'),
+  x('date', 'DATE', 'Excel DATE to DATEFROMPARTS',
+    'DATE(y,m,d) is DATEFROMPARTS(y, m, d).',
+    'Translate Excel DATE to SQL Server DATEFROMPARTS. Invalid dates become NULL with TRY.',
+    'Build a date from year, month, day columns. Do not concatenate strings and hope.',
+    '=DATE(A2,B2,C2)',
+    `DATEFROMPARTS(y, m, d)
+-- dirty
+TRY_CONVERT(date, DATEFROMPARTS(y, m, d))`,
+    'DATEFROMPARTS(2026, 2, 31) errors. TRY_CONVERT after a valid-day check, or clean first.'),
+  x('eomonth', 'EOMONTH', 'Excel EOMONTH to SQL EOMONTH',
+    'Same name. EOMONTH(date, 0) is month end.',
+    'Excel EOMONTH to SQL Server EOMONTH. Use it for month-end snapshots, not for a BETWEEN that drops the last day.',
+    'Month-end of order_date is EOMONTH(order_date, 0). Next month start is DATEADD(day, 1, EOMONTH(order_date, 0)).',
+    '=EOMONTH(A2,0)',
+    `EOMONTH(order_date, 0)`,
+    'A half-open range [start, next month) beats BETWEEN two EOMONTHs.'),
+  x('networkdays', 'NETWORKDAYS', 'NETWORKDAYS — no one-liner in T-SQL',
+    'SQL Server has no NETWORKDAYS. Count weekdays from a calendar table.',
+    'Excel NETWORKDAYS in SQL Server: a calendar table or a tally that skips Saturday and Sunday.',
+    'Business days are a table, not a function. Bank holidays live in that table too.',
+    '=NETWORKDAYS(A2,B2)',
+    `SELECT COUNT(*)
+FROM Calendar
+WHERE day >= @start AND day < DATEADD(day, 1, @end)
+  AND is_weekday = 1
+  AND is_holiday = 0;`,
+    'DATEDIFF(day) counts Saturday. That is not NETWORKDAYS.'),
+  x('index-match', 'INDEX/MATCH', 'INDEX MATCH to SQL JOIN',
+    'INDEX/MATCH is a JOIN. MATCH is the ON, INDEX is the column you select.',
+    'Convert Excel INDEX/MATCH to a SQL Server JOIN. Two-way lookups are two keys in the ON.',
+    'People write INDEX/MATCH to look left. SQL never needed to look left. Join the key, select the column.',
+    '=INDEX(Customers!A:A, MATCH(B2, Customers!C:C, 0))',
+    `SELECT t.email, c.customer_id
+FROM Tickets t
+LEFT JOIN Customers c ON c.email = t.email;`,
+    'Approximate MATCH (last arg 1) is a band table and BETWEEN, same as range VLOOKUP.'),
+  x('unique', 'UNIQUE', 'Excel UNIQUE to SELECT DISTINCT / GROUP BY',
+    'UNIQUE(range) is SELECT DISTINCT or GROUP BY.',
+    'Translate Excel UNIQUE to SQL Server DISTINCT or GROUP BY. DISTINCT is a unique list; GROUP BY if you also count.',
+    'A unique customer list is DISTINCT customer_id. If you need the count, GROUP BY.',
+    '=UNIQUE(A:A)',
+    `SELECT DISTINCT customer_id FROM Orders;
+SELECT customer_id, COUNT(*) AS n FROM Orders GROUP BY customer_id;`,
+    'UNIQUE of two columns is DISTINCT col1, col2. Not two UNIQUEs.'),
+  x('filter', 'FILTER', 'Excel FILTER to SQL WHERE',
+    'FILTER(range, test) is SELECT … WHERE test.',
+    'Convert Excel FILTER to a T-SQL WHERE clause. Spilled arrays are just a result set.',
+    'The dynamic array is the query. The test is the WHERE.',
+    '=FILTER(Orders!A:E, Orders!C:C="Shipped")',
+    `SELECT order_id, customer_id, status, order_date, total_amount
+FROM Orders
+WHERE status = 'Shipped';`,
+    'FILTER with a second if_empty argument is: run the query, and if zero rows, you handle that in the app.'),
+  x('minifs', 'MINIFS', 'MINIFS to SQL MIN with WHERE',
+    'MINIFS is MIN plus AND filters.',
+    'Translate Excel MINIFS to T-SQL MIN(...) WHERE ... or MIN(CASE).',
+    'Earliest shipped date per customer is MIN(order_date) with a filter, grouped.',
+    '=MINIFS(B:B,C:C,"Shipped")',
+    `SELECT MIN(order_date) FROM Orders WHERE status = 'Shipped';
+SELECT customer_id, MIN(CASE WHEN status = 'Shipped' THEN order_date END)
+FROM Orders
+GROUP BY customer_id;`,
+    'MIN ignores NULL, so a CASE that returns NULL on the miss is safe.'),
+  x('maxifs', 'MAXIFS', 'MAXIFS to SQL MAX with WHERE',
+    'MAXIFS is MAX plus AND filters.',
+    'Convert Excel MAXIFS to SQL Server MAX with a WHERE or MAX(CASE).',
+    'Latest order per customer is a classic. MAX(order_date) GROUP BY customer_id.',
+    '=MAXIFS(B:B,C:C,"Shipped")',
+    `SELECT customer_id, MAX(order_date) AS last_shipped
+FROM Orders
+WHERE status = 'Shipped'
+GROUP BY customer_id;`,
+    'Need the whole row, not just the date? That is ROW_NUMBER, not MAXIFS.'),
+  x('round', 'ROUND', 'Excel ROUND to SQL ROUND',
+    'ROUND(n, d) is ROUND(col, d). Banker’s rounding can differ.',
+    'Excel ROUND vs SQL Server ROUND. Same call shape; check mid-point rounding on money.',
+    'ROUND(amount, 2) is the usual. For money that must match a sheet, test .5 once.',
+    '=ROUND(A2,2)',
+    `ROUND(total_amount, 2)`,
+    'CEILING and FLOOR exist too. They are not ROUND.'),
+  x('today', 'TODAY', 'Excel TODAY to CAST(GETDATE() AS date)',
+    'TODAY() is the date. GETDATE() has a time. Cast it.',
+    'Replace Excel TODAY with SQL Server CAST(GETDATE() AS date). Do not filter datetime with a string date by accident.',
+    'GETDATE() is now, with a clock. TODAY is the calendar day. Cast, or you miss nothing after midnight only by luck.',
+    '=TODAY()',
+    `CAST(GETDATE() AS date)`,
+    'WHERE order_date = CAST(GETDATE() AS date) fails on datetime. Use a half-open range.'),
+  x('now', 'NOW', 'Excel NOW to GETDATE / SYSDATETIME',
+    'NOW() is GETDATE() or SYSDATETIME().',
+    'Convert Excel NOW to SQL Server GETDATE or SYSDATETIME. GETDATE is datetime; SYSDATETIME is datetime2.',
+    'A timestamp for “when this row landed” is SYSDATETIME() as a default.',
+    '=NOW()',
+    `GETDATE()
+SYSDATETIME()  -- datetime2, more precision`,
+    'Do not store GETDATE() in a date column and expect the time to still be there.'),
+];
