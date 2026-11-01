@@ -3,7 +3,7 @@ const { parentPort } = require('node:worker_threads');
 const { DatabaseSync } = require('node:sqlite');
 const { build, isoDate } = require('./seed');
 const { register } = require('./sqlfuncs');
-const { translate, TsqlError } = require('./tsql');
+const { translate, TsqlError, engineMessage, unnamedHeader, dialectOf } = require('./dialects');
 
 const MAX_ROWS = 1000;
 let db = null;
@@ -21,41 +21,38 @@ function getDb() {
   return db;
 }
 
-// SQLite messages -> the wording people see in SSMS.
-function sqlServerMessage(msg) {
-  let m;
-  if ((m = msg.match(/no such column: (?:\w+\.)?(.+)/))) return `Invalid column name '${m[1].replace(/"/g, '')}'.`;
-  if ((m = msg.match(/no such table: (.+)/))) return `Invalid object name '${m[1]}'.`;
-  if ((m = msg.match(/no such function: T_(\w+)/))) return `'${m[1]}' is not a recognized built-in function name.`;
-  if ((m = msg.match(/no such function: (\w+)/))) return `'${m[1]}' is not a recognized built-in function name.`;
-  if ((m = msg.match(/near "(.+?)": syntax error/))) return `Incorrect syntax near '${m[1].replace(/^T_/, '')}'.`;
-  if (/incomplete input/.test(msg)) return 'Incorrect syntax near the end of the query.';
-  if ((m = msg.match(/ambiguous column name: (.+)/))) return `Ambiguous column name '${m[1]}'.`;
-  if (/misuse of window function/.test(msg)) return 'Windowed functions can only appear in the SELECT or ORDER BY clauses.';
-  if (/misuse of aggregate/.test(msg))return 'An aggregate may not appear in the WHERE clause. Use HAVING instead.';
-  if (/a GROUP BY clause is required|must appear in the GROUP BY/.test(msg)) return 'Column is invalid in the select list because it is not contained in either an aggregate function or the GROUP BY clause.';
-  if (/readonly/.test(msg)) return 'This sandbox is read-only: SELECT queries only.';
-  return msg.replace(/T_/g, '');
-}
-
-// SQL Server shows "(No column name)" for unaliased expressions.
-function displayName(c) {
+// Unaliased expressions: SQL Server shows "(No column name)", PostgreSQL "count" or "?column?", MySQL the expression.
+function displayName(c, dialect) {
   if (c.column && c.name === c.column) return c.name;
-  return /^[\w ]+$/.test(c.name) && !/\(/.test(c.name) ? c.name : '(No column name)';
+  return /^[\w ]+$/.test(c.name) && !/\(/.test(c.name) ? c.name : unnamedHeader(c.name, dialect);
 }
 
-function run(sql) {
+// Errors in the active stack's own words, plus a hint when a habit from another stack caused it.
+function failure(e, dialect, sql) {
+  if (e instanceof TsqlError) return e.hint ? { error: e.message, hint: e.hint } : { error: e.message };
+  return { error: engineMessage(e.message, dialect, sql) };
+}
+
+// PostgreSQL's LIKE is case-sensitive; SQL Server and MySQL ignore case on these tables.
+function prepare(translated, dialect) {
+  const conn = getDb();
+  conn.exec(`PRAGMA case_sensitive_like = ${dialect === 'postgres' ? 'ON' : 'OFF'}`);
+  return conn.prepare(translated);
+}
+
+function run(sql, dialect) {
+  dialect = dialectOf(dialect);
   let translated;
   try {
-    translated = translate(sql);
+    translated = translate(sql, dialect);
   } catch (e) {
-    if (e instanceof TsqlError) return { error: e.message };
+    if (e instanceof TsqlError) return failure(e, dialect, sql);
     throw e;
   }
   try {
-    const stmt = getDb().prepare(translated);
+    const stmt = prepare(translated, dialect);
     stmt.setReturnArrays(true);
-    const columns = stmt.columns().map(displayName);
+    const columns = stmt.columns().map((c) => displayName(c, dialect));
     const rows = [];
     for (const row of stmt.iterate()) {
       rows.push(row.map((v) => (typeof v === 'bigint' ? Number(v) : v)));
@@ -63,7 +60,7 @@ function run(sql) {
     }
     return { columns, rows: rows.slice(0, MAX_ROWS), truncated: rows.length > MAX_ROWS };
   } catch (e) {
-    return { error: sqlServerMessage(e.message) };
+    return failure(e, dialect, sql);
   }
 }
 
@@ -74,12 +71,13 @@ function preview(table, n) {
 }
 
 // SSMS "Parse": check the query compiles without running it.
-function parse(sql) {
+function parse(sql, dialect) {
+  dialect = dialectOf(dialect);
   try {
-    getDb().prepare(translate(sql));
+    prepare(translate(sql, dialect), dialect);
     return { ok: true };
   } catch (e) {
-    return { error: e instanceof TsqlError ? e.message : sqlServerMessage(e.message) };
+    return failure(e, dialect, sql);
   }
 }
 
@@ -91,10 +89,10 @@ function counts() {
   return out;
 }
 
-parentPort.on('message', ({ id, op, sql, table, n }) => {
+parentPort.on('message', ({ id, op, sql, table, n, dialect }) => {
   try {
-    if (op === 'run') parentPort.postMessage({ id, result: run(sql) });
-    else if (op === 'parse') parentPort.postMessage({ id, result: parse(sql) });
+    if (op === 'run') parentPort.postMessage({ id, result: run(sql, dialect) });
+    else if (op === 'parse') parentPort.postMessage({ id, result: parse(sql, dialect) });
     else if (op === 'counts') parentPort.postMessage({ id, result: counts() });
     else if (op === 'preview') parentPort.postMessage({ id, result: preview(table, n) });
     else if (op === 'today') { getDb(); parentPort.postMessage({ id, result: builtFor }); }

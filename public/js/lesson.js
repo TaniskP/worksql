@@ -1,5 +1,5 @@
 import { attachEditor } from '/js/editor.js';
-import { icons, store, streakPill, esc, pingNudge, reviewerName } from '/js/common.js';
+import { icons, store, streakPill, esc, pingNudge, reviewerName, dialect, DIALECTS, stackPicker, quoteName, errorText } from '/js/common.js';
 
 const $ = (id) => document.getElementById(id);
 const id = Number(location.pathname.match(/\/lesson\/(\d+)/)?.[1] || 1);
@@ -9,7 +9,8 @@ document.querySelectorAll('[data-icon]').forEach((el) => { el.outerHTML = icons[
 $('streak').innerHTML = streakPill();
 $('last').textContent = store.lastSession() || '';
 
-const res = await fetch(`/api/lessons/${id}`);
+const stack = dialect();
+const res = await fetch(`/api/lessons/${id}?dialect=${stack}`);
 if (!res.ok) location.href = '/lessons';
 const { lesson, day, indexInDay, daySize, paidCount, paidDays, tables, reviewer } = await res.json();
 const reviewerLabel = reviewerName(reviewer);
@@ -71,7 +72,7 @@ function gridHtml(columns, rows, { small = false, extra = new Set() } = {}) {
 function showTable(name) {
   $('tabs').querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.dataset.t === name));
   const t = tables[name];
-  $('preview').innerHTML = gridHtml(t.columns.map((c) => (/\s/.test(c) ? `[${c}]` : c)), t.rows, { small: true });
+  $('preview').innerHTML = gridHtml(t.columns.map((c) => quoteName(c, stack)), t.rows, { small: true });
 }
 $('tabs').innerHTML = Object.keys(tables).map((t) => `<button class="tab" data-t="${t}">${t}</button>`).join('');
 $('tabs').addEventListener('click', (e) => { const b = e.target.closest('.tab'); if (b) showTable(b.dataset.t); });
@@ -89,6 +90,12 @@ if (!lesson.free && !store.isPaid()) {
   throw new Error('locked'); // stop wiring the editor
 }
 
+// ---------- stack ----------
+// Switching keeps the same ticket and reloads it in the new stack: its own starter, steps and marking.
+// Nothing is completed or spent by switching.
+stackPicker(document.querySelector('[data-stack-picker]'), { onChange: () => location.reload() });
+$('stack-now').textContent = DIALECTS[stack].label;
+
 // ---------- editor ----------
 const ta = $('sql');
 const editor = attachEditor(document.querySelector('.editor'), {
@@ -102,7 +109,7 @@ function setText(text) {
   editor.set(text);
   editor.focus();
 }
-setText(store.get().drafts[lesson.id] ?? starterFor(step));
+setText(store.draft(lesson.id) ?? starterFor(step));
 
 $('reset').addEventListener('click', () => setText(starterFor(step) ?? 'SELECT\n    '));
 
@@ -113,15 +120,6 @@ function showTab(name) {
   $('messages').hidden = name !== 'messages';
 }
 document.querySelectorAll('.rtab').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
-
-function errorNumber(msg) {
-  if (/^Invalid column/.test(msg)) return 207;
-  if (/^Invalid object/.test(msg)) return 208;
-  if (/^Incorrect syntax/.test(msg)) return 102;
-  if (/not a recognized built-in/.test(msg)) return 195;
-  if (/invalid in the select list/.test(msg)) return 8120;
-  return 50000;
-}
 
 const fmtTime = (sec) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
 
@@ -168,7 +166,7 @@ function renderVerdict(v, { sqlError = false } = {}) {
     return;
   }
 
-  const who = sqlError ? 'SQL Server' : reviewerLabel;
+  const who = sqlError ? DIALECTS[stack].short : reviewerLabel;
   box.innerHTML = `<div class="verdict bad">${icons.warn.replace('<svg', '<svg class="ic"')}
     <div class="msg"><em class="who">${esc(who)}</em><strong>${esc(v.headline)}</strong><span>${esc(v.detail || '')}</span><div class="hint-box" id="hint" hidden></div></div>
     <button class="btn btn-text" id="show-hint">${icons.bulb} Show hint</button></div>`;
@@ -194,7 +192,7 @@ async function run() {
   $('status').textContent = 'Executing query…';
   try {
     const r = await fetch('/api/run', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lessonId: lesson.id, step, sql: ta.value }),
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lessonId: lesson.id, step, sql: ta.value, dialect: stack }),
     });
     const data = await r.json();
     if (r.status === 402) {
@@ -205,10 +203,10 @@ async function run() {
     if (data.error) {
       $('rtab-results').textContent = 'Results';
       $('results').innerHTML = '<div class="empty">No results. Check the Messages tab.</div>';
-      $('messages').innerHTML = `<div class="messages"><span class="err">Msg ${errorNumber(data.error)}, Level 16, State 1, Line 1\n${esc(data.error)}</span>\n\nCompletion time: ${stamp}</div>`;
+      $('messages').innerHTML = `<div class="messages"><span class="err">${esc(errorText(data.error, data.hint, stack))}</span>\n\nCompletion time: ${stamp}</div>`;
       $('status').textContent = 'Query completed with errors.';
       showTab('messages');
-      renderVerdict(data.verdict || { pass: false, headline: data.error, detail: 'SQL Server would say the same. Fix it and run again.' }, { sqlError: !data.verdict });
+      renderVerdict(data.verdict || { pass: false, headline: data.error, detail: data.hint || `${DIALECTS[stack].short} would say the same. Fix it and run again.` }, { sqlError: !data.verdict });
       return;
     }
     const v = data.verdict;

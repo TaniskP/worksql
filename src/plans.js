@@ -8,7 +8,7 @@ const plans = [
     price: 0,
     interval: null,
     summary: 'Monday Basics: 5 habits, taught step by step',
-    features: ['Monday: 10 tickets, walkthroughs plus reps', 'Real T-SQL, marked strictly', 'Daily streak'],
+    features: ['Monday: 10 tickets, walkthroughs plus reps', 'Real SQL in your stack, marked strictly', 'Daily streak'],
   },
   {
     id: 'monthly',

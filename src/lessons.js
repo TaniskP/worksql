@@ -29,6 +29,9 @@ const days = [
   { id: 7, week: 2, name: 'Tuesday', title: 'Windows and review', blurb: 'Running totals, RANK, LAG, percent of total, and an interview pair.' },
 ];
 
+// The same advice in each stack's words, for diagnose(): say(ctx, tsql, postgres, mysql).
+const say = (ctx, tsql, postgres, mysql) => ({ postgres, mysql }[ctx.dialect] || tsql);
+
 const LAST_7 = 'order_date >= DATEADD(day, -7, CAST(GETDATE() AS date)) AND order_date < CAST(GETDATE() AS date)';
 const LAST_30 = 'order_date >= DATEADD(day, -30, CAST(GETDATE() AS date)) AND order_date < CAST(GETDATE() AS date)';
 
@@ -106,13 +109,16 @@ const lessons = [
     orderBy: [{ col: 'order_date', desc: true }],
     thanks: 'That’s the slide sorted. Cheers.',
     hints: ['A date range has two ends: midnight 7 days ago, and midnight today.', 'CAST(GETDATE() AS date) is midnight today. DATEADD(day, -7, ...) moves a date back a week.'],
-    diagnose({ extra, missing, today, col }) {
+    diagnose(ctx) {
+      const { extra, missing, today, col } = ctx;
       const d = col('order_date'); const t = col('total_amount');
       if (d >= 0 && extra.some((r) => String(r[d]).slice(0, 10) === today)) {
         return { headline: 'You’ve included today.', detail: 'Last 7 days is yesterday back, not today.' };
       }
       if (t >= 0 && extra.some((r) => Number(r[t]) <= 50)) return { headline: 'Some of these are £50 or less.', detail: 'Add AND total_amount > 50.' };
-      if (extra.length) return { headline: 'Some of these are older than last week.', detail: 'Start the range at DATEADD(day, -7, CAST(GETDATE() AS date)).' };
+      if (extra.length) {
+        return { headline: 'Some of these are older than last week.', detail: `Start the range at ${say(ctx, 'DATEADD(day, -7, CAST(GETDATE() AS date))', "CURRENT_DATE - INTERVAL '7 days'", 'DATE_SUB(CURDATE(), INTERVAL 7 DAY)')}.` };
+      }
       if (missing.length) return { headline: 'You’re missing some of last week’s orders.', detail: 'Check where your range starts.' };
     },
   },
@@ -144,8 +150,8 @@ const lessons = [
     solution: "SELECT customer_id, first_name, last_name, ISNULL(phone, 'No phone') AS phone FROM Customers",
     thanks: 'Much better. Thanks.',
     hints: ['NULL needs swapping for a word. There’s a function made for exactly that.', 'Wrapping a column in a function loses its header. AS gives it back.'],
-    diagnose({ user }) {
-      if (user.rows.some((r) => r.some((v) => v === null))) return { headline: 'Some phone numbers still say NULL.', detail: "Wrap the column: ISNULL(phone, 'No phone') AS phone." };
+    diagnose(ctx) {
+      if (ctx.user.rows.some((r) => r.some((v) => v === null))) return { headline: 'Some phone numbers still say NULL.', detail: `Wrap the column: ${say(ctx, 'ISNULL', 'COALESCE', 'IFNULL')}(phone, 'No phone') AS phone.` };
     },
   },
   {
@@ -156,8 +162,8 @@ const lessons = [
     solution: "SELECT customer_id, ISNULL(company_name, 'Individual') AS company_name, email FROM Customers",
     thanks: 'Template’s happy. Thanks.',
     hints: ['Same function as the phone list.', 'Give the column its name back with AS.'],
-    diagnose({ user }) {
-      if (user.rows.some((r) => r.some((v) => v === null))) return { headline: 'There are still NULLs in there.', detail: "Use ISNULL(company_name, 'Individual')." };
+    diagnose(ctx) {
+      if (ctx.user.rows.some((r) => r.some((v) => v === null))) return { headline: 'There are still NULLs in there.', detail: `Use ${say(ctx, 'ISNULL', 'COALESCE', 'IFNULL')}(company_name, 'Individual').` };
     },
   },
   {
@@ -204,9 +210,10 @@ const lessons = [
     orderBy: [{ col: 'total_amount', desc: true }],
     thanks: 'Good. Two of those are the Brightside account, interesting.',
     hints: ['TOP takes the first N rows after sorting. What should you sort by?', 'TOP goes straight after SELECT. Biggest first means DESC.'],
-    diagnose({ user }) {
-      if (user.rows.length > 5) return { headline: 'Five rows, not all of them.', detail: 'Put TOP 5 straight after SELECT.' };
-      if (user.rows.length === 5) return { headline: 'Five rows, but not the biggest five.', detail: 'TOP takes the first rows after sorting. Sort by total_amount DESC.' };
+    diagnose(ctx) {
+      const { user } = ctx;
+      if (user.rows.length > 5) return { headline: 'Five rows, not all of them.', detail: say(ctx, 'Put TOP 5 straight after SELECT.', 'Put LIMIT 5 at the end.', 'Put LIMIT 5 at the end.') };
+      if (user.rows.length === 5) return { headline: 'Five rows, but not the biggest five.', detail: `${say(ctx, 'TOP', 'LIMIT', 'LIMIT')} takes the first rows after sorting. Sort by total_amount DESC.` };
     },
   },
   {
@@ -662,6 +669,8 @@ lessons.splice(0, lessons.length, ...ordered);
 const FREE_LESSONS = lessons.filter((l) => l.free).length;
 
 // The step a learner is on, with lesson defaults filled in for the final ticket.
+const { forStack, dayForStack } = require('./lessons-stacks');
+
 function stepSpec(lesson, i) {
   const steps = lesson.steps || [{ final: true }];
   const step = steps[Math.min(Math.max(0, i | 0), steps.length - 1)];
@@ -694,4 +703,8 @@ function nextOpen(completedIds) {
   return lessons.find((l) => !done.has(l.id)) || lessons[lessons.length - 1];
 }
 
-module.exports = { lessons, days, stepSpec, publicLesson, listing, nextOpen, FREE_LESSONS };
+// The catalogue and lessons as one stack reads them.
+const stackDays = (dialect) => days.map((d) => dayForStack(d, dialect));
+const lessonFor = (l, dialect) => forStack(l, dialect);
+
+module.exports = { lessons, days, stepSpec, publicLesson, listing, nextOpen, FREE_LESSONS, lessonFor, stackDays };

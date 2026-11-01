@@ -3,7 +3,8 @@ const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
 const sandbox = require('./src/sandbox');
-const { lessons, days, publicLesson, listing } = require('./src/lessons');
+const { lessons, days, publicLesson, listing, lessonFor, stackDays } = require('./src/lessons');
+const { dialectOf } = require('./src/dialects');
 const { grade } = require('./src/grade');
 const { SCHEMA, TABLE_INFO } = require('./src/seed');
 const site = require('./src/site');
@@ -67,53 +68,67 @@ function serveFile(res, file) {
   });
 }
 
+// Column types as each stack would show them in its own catalogue.
+function typeFor(type, dialect) {
+  if (dialect === 'tsql') return type;
+  const t = type.replace(/^nvarchar/, 'varchar');
+  if (dialect === 'postgres') return t.replace(/^int$/, 'integer').replace(/^decimal/, 'numeric').replace(/^bit$/, 'boolean');
+  return t.replace(/^bit$/, 'tinyint(1)');
+}
+
 async function api(req, res, url) {
   const p = url.pathname;
   let m;
+  // The learner's stack: ?dialect= on GETs, "dialect" in POST bodies. Unknown values mean SQL Server.
+  const qDialect = dialectOf(url.searchParams.get('dialect'));
 
-  if (req.method === 'GET' && p === '/api/lessons') return send(res, 200, { days, lessons: lessons.map(listing) });
+  if (req.method === 'GET' && p === '/api/lessons') {
+    return send(res, 200, { days: stackDays(qDialect), lessons: lessons.map((l) => listing(lessonFor(l, qDialect))) });
+  }
 
   if (req.method === 'GET' && (m = p.match(/^\/api\/lessons\/(\d+)$/))) {
     const lesson = lessons.find((l) => l.id === +m[1]);
     if (!lesson) return send(res, 404, { error: 'No such lesson.' });
     const tables = {};
     for (const t of TABLES) tables[t] = await sandbox.preview(t, 3);
-    const day = days.find((d) => d.id === lesson.day);
+    const day = stackDays(qDialect).find((d) => d.id === lesson.day);
     const inDay = lessons.filter((l) => l.day === lesson.day);
     return send(res, 200, {
-      lesson: publicLesson(lesson), day, indexInDay: inDay.indexOf(lesson) + 1, daySize: inDay.length,
+      lesson: publicLesson(lessonFor(lesson, qDialect)), dialect: qDialect, day, indexInDay: inDay.indexOf(lesson) + 1, daySize: inDay.length,
       total: lessons.length, paidCount: lessons.filter((l) => !l.free).length, paidDays: days.length - 1, reviewer: site.reviewer, tables, today: await sandbox.today(),
     });
   }
 
   if (req.method === 'POST' && p === '/api/run') {
-    const { lessonId, step, sql } = await readJson(req);
+    const { lessonId, step, sql, dialect } = await readJson(req);
     const lesson = lessons.find((l) => l.id === +lessonId);
     if (!lesson) return send(res, 404, { error: 'No such lesson.' });
     // Paid tickets need a paid member's cookie. Checked here on the server, not just hidden in the page.
     if (!canRun(lesson, session.whoIs(req))) return send(res, 402, { error: 'paid_only', message: 'This ticket is on the paid plan.' });
-    return send(res, 200, await grade(lesson, step, sql));
+    return send(res, 200, await grade(lesson, step, sql, dialect));
   }
 
   // ---------- work mode ----------
   if (req.method === 'GET' && p === '/api/work') {
     const counts = await sandbox.counts();
     const schema = Object.entries(SCHEMA).map(([name, columns]) => ({
-      name, rows: counts[name], description: TABLE_INFO[name], columns: columns.map(([col, type, nullable, key]) => ({ name: col, type, nullable, key: key || null })),
+      name, rows: counts[name], description: TABLE_INFO[name], columns: columns.map(([col, type, nullable, key]) => ({ name: col, type: typeFor(type, qDialect), nullable, key: key || null })),
     }));
-    return send(res, 200, { days, lessons: lessons.map(publicLesson), schema, reviewer: site.reviewer, today: await sandbox.today() });
+    return send(res, 200, {
+      days: stackDays(qDialect), lessons: lessons.map((l) => publicLesson(lessonFor(l, qDialect))), dialect: qDialect, schema, reviewer: site.reviewer, today: await sandbox.today(),
+    });
   }
 
   if (req.method === 'POST' && p === '/api/query') {
-    const { sql } = await readJson(req);
+    const { sql, dialect } = await readJson(req);
     const started = Date.now();
-    const r = await sandbox.run(String(sql || ''));
+    const r = await sandbox.run(String(sql || ''), dialectOf(dialect));
     return send(res, 200, { ...r, ms: Date.now() - started });
   }
 
   if (req.method === 'POST' && p === '/api/parse') {
-    const { sql } = await readJson(req);
-    return send(res, 200, await sandbox.parse(String(sql || '')));
+    const { sql, dialect } = await readJson(req);
+    return send(res, 200, await sandbox.parse(String(sql || ''), dialectOf(dialect)));
   }
 
   if (req.method === 'GET' && p === '/api/plans') {

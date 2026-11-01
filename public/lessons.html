@@ -48,6 +48,10 @@
   </header>
 
   <main class="page">
+    <div class="stack-bar lessons-stack">
+      <span class="stack-now">Lessons, walkthroughs and marking follow your stack.</span>
+      <div data-stack-picker="lessons"></div>
+    </div>
     <div class="path-wrap">
       <div id="paths"></div>
       <aside>
@@ -78,12 +82,13 @@
   <script type="module" src="/js/back.js"></script>
   <script type="module" src="/js/cookies.js"></script>
   <script type="module">
-    import { icons, store, streakPill, esc, devPlanToggle, nudgeForm, pingNudge, accountCard, restoreForm } from '/js/common.js';
+    import { icons, store, streakPill, esc, devPlanToggle, nudgeForm, pingNudge, accountCard, restoreForm, stackPicker, dialect } from '/js/common.js';
     document.querySelector('[data-logo]').insertAdjacentHTML('afterbegin', icons.logo);
     document.getElementById('streak').innerHTML = streakPill();
     document.getElementById('last').textContent = store.lastSession() || '';
+    stackPicker(document.querySelector('[data-stack-picker="lessons"]'), { onChange: () => location.reload() });
 
-    const { days, lessons } = await (await fetch('/api/lessons')).json();
+    const { days, lessons } = await (await fetch(`/api/lessons?dialect=${dialect()}`)).json();
     const { completed } = store.get();
     const paid = store.isPaid();
     const current = (lessons.find((l) => !completed[l.id]) || {}).id;

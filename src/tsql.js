@@ -4,7 +4,19 @@
 
 const { SCHEMA } = require('./seed');
 
-class TsqlError extends Error {}
+class TsqlError extends Error {
+  constructor(message, hint) { super(message); if (hint) this.hint = hint; }
+}
+
+// The stack being translated right now. Translation is synchronous, so a module variable is enough.
+let dialectNow = 'tsql';
+
+// "Incorrect syntax near" in each stack's own words. near = null means the query just stopped.
+function syntaxMsg(near, dialect = dialectNow) {
+  if (dialect === 'postgres') return near == null ? 'syntax error at end of input' : `syntax error at or near "${near}"`;
+  if (dialect === 'mysql') return `You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '${near ?? ''}' at line 1`;
+  return near == null ? 'Incorrect syntax near the end of the query.' : `Incorrect syntax near '${near}'.`;
+}
 
 const KNOWN_COLUMNS = new Set(Object.values(SCHEMA).flatMap((cols) => cols.map((c) => c[0].toLowerCase())));
 
@@ -35,17 +47,18 @@ const BLOCKED = new Set([
   'EXEC', 'EXECUTE', 'GRANT', 'REVOKE', 'ATTACH', 'DETACH', 'PRAGMA', 'VACUUM', 'REINDEX',
 ]);
 
-function tokenize(sql) {
+function tokenize(sql, dialect = 'tsql') {
+  dialectNow = dialect;
   const tokens = [];
   let i = 0;
   while (i < sql.length) {
     const c = sql[i];
     const rest = sql.slice(i);
     if (/\s/.test(c)) { i++; continue; }
-    if (rest.startsWith('--')) { const e = sql.indexOf('\n', i); i = e === -1 ? sql.length : e; continue; }
+    if (rest.startsWith('--') || (dialect === 'mysql' && c === '#')) { const e = sql.indexOf('\n', i); i = e === -1 ? sql.length : e; continue; }
     if (rest.startsWith('/*')) {
       const e = sql.indexOf('*/', i + 2);
-      if (e === -1) throw new TsqlError("Missing end comment mark '*/'.");
+      if (e === -1) throw new TsqlError(dialect === 'tsql' ? "Missing end comment mark '*/'." : dialect === 'postgres' ? 'unterminated /* comment at or near "/*"' : syntaxMsg(rest.slice(0, 20)));
       i = e + 2; continue;
     }
     let m;
@@ -54,7 +67,25 @@ function tokenize(sql) {
       tokens.push({ t: 'str', v: raw }); i += m[0].length; continue;
     }
     if (c === "'" || ((c === 'N' || c === 'n') && sql[i + 1] === "'")) {
-      throw new TsqlError('Unclosed quotation mark after the character string.');
+      throw new TsqlError(dialect === 'tsql' ? 'Unclosed quotation mark after the character string.'
+        : dialect === 'postgres' ? `unterminated quoted string at or near "${rest.slice(0, 20)}"` : syntaxMsg(rest.slice(0, 20)));
+    }
+    if (c === '[' && dialect !== 'tsql') {
+      throw new TsqlError(syntaxMsg('['), dialect === 'postgres' ? 'Square brackets are SQL Server only. PostgreSQL quotes names with "double quotes".'
+        : 'Square brackets are SQL Server only. MySQL quotes names with `backticks`.');
+    }
+    if (c === '`' && dialect === 'mysql') {
+      const e = sql.indexOf('`', i + 1);
+      if (e === -1) throw new TsqlError(syntaxMsg(rest.slice(0, 20)));
+      const name = sql.slice(i + 1, e);
+      tokens.push({ t: 'ident', v: '"' + name.replace(/"/g, '""') + '"', name });
+      i = e + 1; continue;
+    }
+    if (c === '"' && dialect === 'mysql') { // MySQL reads "double quotes" as a string, not a name
+      const q = rest.match(/^"(?:[^"]|"")*"/);
+      if (!q) throw new TsqlError(syntaxMsg(rest.slice(0, 20)));
+      tokens.push({ t: 'str', v: "'" + q[0].slice(1, -1).replace(/""/g, '"').replace(/'/g, "''") + "'" });
+      i += q[0].length; continue;
     }
     if (c === '[') {
       const e = sql.indexOf(']', i);
@@ -66,7 +97,7 @@ function tokenize(sql) {
     if ((m = rest.match(/^(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?/))) { tokens.push({ t: 'num', v: m[0] }); i += m[0].length; continue; }
     if ((m = rest.match(/^[@#]{0,2}[A-Za-z_][A-Za-z0-9_$#@]*/))) {
       if (m[0][0] === '@') throw new TsqlError('Variables (' + m[0] + ") aren't used in these lessons. Write a plain SELECT.");
-      if (m[0][0] === '#') throw new TsqlError('Temp tables are coming in a later path. Write a plain SELECT for now.');
+      if (m[0][0] === '#') throw new TsqlError(dialect === 'tsql' ? 'Temp tables are coming in a later path. Write a plain SELECT for now.' : syntaxMsg('#'));
       tokens.push({ t: 'word', v: m[0], up: m[0].toUpperCase() }); i += m[0].length; continue;
     }
     if ((m = rest.match(/^(<>|!=|>=|<=|!<|!>|\|\||::)/))) { tokens.push({ t: 'op', v: m[0] }); i += m[0].length; continue; }
@@ -82,7 +113,7 @@ function matchParen(tokens, open) {
     if (tokens[k].t === '(') depth++;
     else if (tokens[k].t === ')' && --depth === 0) return k;
   }
-  throw new TsqlError("Incorrect syntax: a '(' is never closed.");
+  throw new TsqlError(dialectNow === 'tsql' ? "Incorrect syntax: a '(' is never closed." : syntaxMsg(null));
 }
 
 // Split tokens[from..to) at depth-0 commas.
@@ -241,7 +272,15 @@ function looksLikeTextConcat(tokens, k) {
 const AGGREGATES = new Set(['COUNT', 'SUM', 'AVG', 'MIN', 'MAX', 'COUNT_BIG', 'STRING_AGG', 'STDEV', 'VAR']);
 const NOT_COLUMNS = new Set(['CASE', 'WHEN', 'THEN', 'ELSE', 'END', 'AND', 'OR', 'NOT', 'NULL', 'IS', 'IN', 'LIKE', 'BETWEEN',
   'AS', 'DISTINCT', 'OVER', 'PARTITION', 'BY', 'ORDER', 'ASC', 'DESC', 'ROWS', 'RANGE', 'UNBOUNDED', 'PRECEDING', 'FOLLOWING',
-  'CURRENT', 'ROW', 'CURRENT_TIMESTAMP', 'EXISTS', 'SELECT', 'TRUE', 'FALSE']);
+  'CURRENT', 'ROW', 'CURRENT_TIMESTAMP', 'EXISTS', 'SELECT', 'TRUE', 'FALSE',
+  // Words inside EXTRACT(... FROM ...), INTERVAL n DAY, ::date and CAST types in PostgreSQL and MySQL
+  'FROM', 'INTERVAL', 'DATE', 'DATETIME', 'TIMESTAMP', 'CHAR', 'SIGNED', 'UNSIGNED', 'DECIMAL', 'NUMERIC', 'INTEGER', 'INT', 'TEXT',
+  'VARCHAR', 'DAY', 'WEEK', 'MONTH', 'YEAR', 'HOUR', 'MINUTE', 'SECOND', 'QUARTER', 'CURRENT_DATE', 'LOCALTIMESTAMP', 'NULLS',
+  'FIRST', 'LAST', 'SEPARATOR', 'ILIKE']);
+const PK = Object.fromEntries(Object.entries(SCHEMA).map(([t, cols]) => [t.toLowerCase(), cols.find((c) => c[3] === 'PK')[0].toLowerCase()]));
+const TABLE_COLS = Object.fromEntries(Object.entries(SCHEMA).map(([t, cols]) => [t.toLowerCase(), new Set(cols.map((c) => c[0].toLowerCase()))]));
+const TABLE_NAME = Object.fromEntries(Object.keys(SCHEMA).map((t) => [t.toLowerCase(), t]));
+const FROM_STOP = new Set(['JOIN', 'INNER', 'LEFT', 'RIGHT', 'FULL', 'OUTER', 'CROSS', 'ON', 'WHERE', 'GROUP', 'ORDER', 'HAVING', 'LIMIT', 'UNION', 'WINDOW', 'USING']);
 const CLAUSE_END = new Set(['HAVING', 'ORDER', 'UNION', 'EXCEPT', 'INTERSECT', 'WINDOW']);
 
 const isWordTok = (t) => t && (t.t === 'word' || t.t === 'ident');
@@ -268,6 +307,11 @@ function bareColumns(toks) {
           if (depth === 1 && toks[j].v === ',') { i = j; break; }
         }
       }
+      continue;
+    }
+    if (t.t === 'op' && t.v === '::') { // x::date: skip the type
+      i++;
+      if (toks[i + 1] && toks[i + 1].t === '(') i = matchParen(toks, i + 1);
       continue;
     }
     if (t.up === 'AS') { // CAST(x AS type): skip the type
@@ -312,7 +356,59 @@ function stripAlias(item) {
   return item;
 }
 
-function checkGrouping(tokens) {
+// FROM Orders o JOIN Customers AS c -> { o: 'orders', orders: 'orders', c: 'customers', customers: 'customers' }
+function fromTables(tokens, from, end) {
+  const map = {};
+  let depth = 0;
+  for (let j = from + 1; j < end; j++) {
+    const t = tokens[j];
+    if (t.t === '(') depth++;
+    if (t.t === ')') depth--;
+    if (depth !== 0 || !isWordTok(t)) continue;
+    const name = (t.t === 'ident' ? t.name : t.v).toLowerCase();
+    if (!PK[name] || (tokens[j - 1] && tokens[j - 1].v === '.')) continue;
+    map[name] = name;
+    let a = tokens[j + 1];
+    if (a && a.up === 'AS') a = tokens[j + 2];
+    if (a && isWordTok(a) && !FROM_STOP.has(a.up)) map[(a.t === 'ident' ? a.name : a.v).toLowerCase()] = name;
+  }
+  return map;
+}
+
+// The table a column reference belongs to, if we can tell.
+function tableOf(col, tables) {
+  const parts = col.toLowerCase().split('.');
+  if (parts.length > 1) return tables[parts[parts.length - 2]] || null;
+  const owners = [...new Set(Object.values(tables))].filter((t) => TABLE_COLS[t].has(parts[0]));
+  return owners.length === 1 ? owners[0] : null;
+}
+
+function groupingError(dialect, col, n, tables, grouped) {
+  const table = tableOf(col, tables);
+  const bare = lastName(col);
+  if (dialect === 'postgres') {
+    const shown = col.includes('.') ? col.toLowerCase() : table ? `${table}.${bare.toLowerCase()}` : bare.toLowerCase();
+    return new TsqlError(`column "${shown}" must appear in the GROUP BY clause or be used in an aggregate function`);
+  }
+  if (dialect === 'mysql') {
+    const shown = table ? `harbour.${TABLE_NAME[table]}.${bare}` : bare;
+    return new TsqlError(grouped
+      ? `Expression #${n} of SELECT list is not in GROUP BY clause and contains nonaggregated column '${shown}' which is not functionally dependent on columns in GROUP BY clause; this is incompatible with sql_mode=only_full_group_by`
+      : `In aggregated query without GROUP BY, expression #${n} of SELECT list contains nonaggregated column '${shown}'; this is incompatible with sql_mode=only_full_group_by`);
+  }
+  return new TsqlError(`Column '${col}' is invalid in the select list because it is not contained in either an aggregate function or the GROUP BY clause.`);
+}
+
+function aliasError(dialect, name) {
+  if (dialect === 'postgres') return new TsqlError(`column "${name.toLowerCase()}" does not exist`);
+  if (dialect === 'mysql') return new TsqlError(`Unknown column '${name}' in 'where clause'`);
+  return new TsqlError(`Invalid column name '${name}'.`);
+}
+
+// Each stack's GROUP BY rule. SQL Server: every selected column must be grouped or aggregated.
+// PostgreSQL and MySQL (ONLY_FULL_GROUP_BY) also accept columns that depend on a grouped primary key,
+// and let GROUP BY use a select alias or a position. MySQL also lets HAVING use an alias.
+function checkGrouping(tokens, dialect = 'tsql') {
   for (let s = 0; s < tokens.length; s++) {
     if (tokens[s].up !== 'SELECT') continue;
     // Find the end of this SELECT's scope and its clauses, at its own depth.
@@ -326,7 +422,8 @@ function checkGrouping(tokens) {
       if (depth !== 0) continue;
       if (['GROUP', 'ORDER', 'UNION', 'EXCEPT', 'INTERSECT', 'WINDOW'].includes(t.up)) inFilter = false;
       if (inFilter) filters.push(j);
-      if (t.up === 'WHERE' || t.up === 'HAVING') inFilter = true;
+      if (t.up === 'WHERE' || (t.up === 'HAVING' && dialect !== 'mysql')) inFilter = true;
+      if (t.up === 'HAVING' && dialect === 'mysql') inFilter = false;
       if (t.up === 'FROM' && from < 0) from = j;
       if (t.up === 'GROUP' && tokens[j + 1] && tokens[j + 1].up === 'BY') group = j + 2;
       if (CLAUSE_END.has(t.up) && group >= 0 && groupEnd < 0) groupEnd = j;
@@ -350,26 +447,47 @@ function checkGrouping(tokens) {
       const t = tokens[j];
       if (!isWordTok(t) || (tokens[j + 1] && tokens[j + 1].t === '(') || (tokens[j - 1] && tokens[j - 1].v === '.')) continue;
       const name = (t.t === 'ident' ? t.name : t.v).toLowerCase();
-      if (aliases.has(name) && !KNOWN_COLUMNS.has(name)) throw new TsqlError(`Invalid column name '${t.t === 'ident' ? t.name : t.v}'.`);
+      if (aliases.has(name) && !KNOWN_COLUMNS.has(name)) throw aliasError(dialect, t.t === 'ident' ? t.name : t.v);
     }
 
-    const items = rawItems.map(stripAlias).filter((x) => x.length);
+    const items = rawItems.map(stripAlias);
     const grouped = group >= 0;
     if (!grouped && !items.some(hasAggregate)) continue;
-    const groupExprs = grouped ? splitArgs(tokens, group, groupEnd).map(textOf) : [];
+    const loose = dialect !== 'tsql';
+    let groupToks = grouped ? splitArgs(tokens, group, groupEnd) : [];
+    if (loose) { // GROUP BY 1 or GROUP BY alias means that select item
+      const aliasOf = rawItems.map((it, n) => (items[n].length < it.length ? textOf([it[it.length - 1]]) : null));
+      groupToks = groupToks.map((g) => {
+        if (g.length === 1 && g[0].t === 'num' && items[+g[0].v - 1]) return items[+g[0].v - 1];
+        const n = g.length === 1 ? aliasOf.indexOf(textOf(g)) : -1;
+        return n >= 0 && !KNOWN_COLUMNS.has(textOf(g)) ? items[n] : g;
+      });
+    }
+    const groupExprs = groupToks.map(textOf);
     const groupNames = new Set(groupExprs.flatMap((g) => [g, lastName(g)]));
-    for (const item of items) {
+    const tables = from >= 0 ? fromTables(tokens, from, end) : {};
+    // Tables whose primary key is grouped: every column of theirs is allowed (PostgreSQL and MySQL only).
+    const keyed = new Set(loose ? groupExprs.map((g) => {
+      const t = tableOf(g, tables);
+      return t && PK[t] === lastName(g) ? t : null;
+    }).filter(Boolean) : []);
+    items.forEach((item, n) => {
+      if (!item.length) return;
       if (item.length === 1 && item[0].v === '*') {
-        throw new TsqlError("Column '*' is invalid in the select list because it is not contained in either an aggregate function or the GROUP BY clause.");
+        if (dialect === 'tsql') throw new TsqlError("Column '*' is invalid in the select list because it is not contained in either an aggregate function or the GROUP BY clause.");
+        const all = [...new Set(Object.values(tables))];
+        if (all.every((t) => keyed.has(t))) return;
+        const t = all.find((x) => !keyed.has(x));
+        throw groupingError(dialect, t ? `${t}.${[...TABLE_COLS[t]].find((c) => !groupNames.has(c))}` : '*', n + 1, tables, grouped);
       }
-      if (groupExprs.includes(textOf(item))) continue;
+      if (groupExprs.includes(textOf(item))) return;
       for (const col of bareColumns(item)) {
         const c = col.toLowerCase();
-        if (!groupNames.has(c) && !groupNames.has(lastName(c))) {
-          throw new TsqlError(`Column '${col}' is invalid in the select list because it is not contained in either an aggregate function or the GROUP BY clause.`);
-        }
+        if (groupNames.has(c) || groupNames.has(lastName(c))) continue;
+        if (keyed.size && keyed.has(tableOf(c, tables))) continue;
+        throw groupingError(dialect, col, n + 1, tables, grouped);
       }
-    }
+    });
   }
 }
 
@@ -395,4 +513,6 @@ function translate(sql) {
   return render(transform(tokens));
 }
 
-module.exports = { translate, TsqlError };
+module.exports = {
+  translate, TsqlError, tokenize, render, matchParen, splitArgs, checkGrouping, looksLikeTextConcat, syntaxMsg, BLOCKED, KNOWN_COLUMNS,
+};

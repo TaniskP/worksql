@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>WorkSQL - A ticket lands. You write the query.</title>
-  <meta name="description" content="Practise SQL Server through realistic data requests from colleagues. Read the email, write the T-SQL, get feedback. 10 free tickets, no sign-up.">
+  <meta name="description" content="Practise SQL through realistic data requests from colleagues, in SQL Server, PostgreSQL or MySQL. Read the email, write the query, get feedback. 10 free tickets, no sign-up.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cellipse cx='16' cy='7' rx='11' ry='4' fill='%231f5eff'/%3E%3Cpath d='M5 7v18c0 2.2 4.9 4 11 4s11-1.8 11-4V7c0 2.2-4.9 4-11 4S5 9.2 5 7Z' fill='%231f5eff' opacity='.75'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
@@ -55,7 +55,8 @@
     <div class="hero-body">
       <div class="hero-eyebrow"><span class="dot"></span> Harbour &amp; Co · 09:14 · 1 new message</div>
       <h1>A ticket lands.<br>You write the query.</h1>
-      <p class="lead">Realistic data requests from colleagues: read the email, write the T-SQL, get feedback on your result.</p>
+      <p class="lead">Realistic data requests from colleagues: read the email, write the SQL, get feedback on your result.</p>
+      <div class="hero-stack" data-stack-picker="home"></div>
       <div class="hero-ctas">
         <a href="/work?go=1" class="btn btn-primary btn-lg" data-clockin>Clock in free <span data-icon="arrow"></span></a>
         <a href="/lessons" class="btn btn-ghost btn-lg" data-lessons>Guided lessons</a>
@@ -77,7 +78,7 @@
     <ul class="shift-facts">
       <li><b>One company.</b> Harbour &amp; Co: customers, orders, order lines, products, returns, staff. Messy, like real tables.</li>
       <li><b>Strict marking.</b> SELECT * doesn’t pass. Extra columns, the wrong headers or a missing ORDER BY get sent back.</li>
-      <li><b>Real SQL Server habits.</b> TOP, ISNULL, GETDATE, square brackets, F5 to execute, errors worded like SSMS.</li>
+      <li><b>Real SQL in your stack, marked strictly.</b> Pick SQL Server, PostgreSQL or MySQL. Its functions, its quoting, its GROUP BY rules and its error messages.</li>
     </ul>
   </section>
 
@@ -231,7 +232,7 @@
     <div class="prose-grid">
       <div class="prose-block">
         <h3>What a ticket is</h3>
-        <p>One short request from a colleague at Harbour &amp; Co, a made-up company with the tables most small businesses have: Customers, Orders, OrderLines, Products, Returns and Staff. You read the email, write T-SQL in a query window, run it against a real database and send the result back. Each one takes about five minutes.</p>
+        <p>One short request from a colleague at Harbour &amp; Co, a made-up company with the tables most small businesses have: Customers, Orders, OrderLines, Products, Returns and Staff. You pick your stack (SQL Server, PostgreSQL or MySQL), read the email, write the query in a query window, run it against a real database and send the result back. Each one takes about five minutes.</p>
       </div>
       <div class="prose-block">
         <h3>How it’s marked</h3>
@@ -283,8 +284,10 @@
   <script type="module" src="/js/back.js"></script>
   <script type="module" src="/js/cookies.js"></script>
   <script type="module">
-    import { icons, esc } from '/js/common.js';
+    import { icons, esc, stackPicker, dialect } from '/js/common.js';
     document.querySelectorAll('[data-logo]').forEach((el) => el.insertAdjacentHTML('afterbegin', icons.logo));
+    // Pick a stack before clocking in. Lessons and work mode both read it from this browser.
+    stackPicker(document.querySelector('[data-stack-picker="home"]'), { label: 'Practise in' });
     document.querySelectorAll('[data-icon]').forEach((el) => { el.outerHTML = icons[el.dataset.icon]; });
 
     // Work mode needs a laptop-sized screen. On a phone, the door leads to the lessons instead.
@@ -293,7 +296,7 @@
       document.querySelector('.hero [data-lessons]')?.remove(); // the main button already leads to the lessons here
     }
 
-    fetch('/api/lessons').then((r) => r.json()).then(({ days, lessons }) => {
+    fetch(`/api/lessons?dialect=${dialect()}`).then((r) => r.json()).then(({ days, lessons }) => {
       document.getElementById('week-title').textContent = `${lessons.length} workplace tickets across ${days.length} simulated workdays.`;
       document.getElementById('preview-list').innerHTML = days.map((d) => {
         const ls = lessons.filter((l) => l.day === d.id);

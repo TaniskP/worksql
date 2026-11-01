@@ -44,12 +44,16 @@
     </div>
 
     <div id="work">
+      <div class="stack-bar">
+        <span class="stack-now">Query window · <b id="stack-now">SQL Server (T-SQL)</b></span>
+        <div data-stack-picker="lesson"></div>
+      </div>
       <section class="card editor-card">
         <div class="editor">
           <div class="gutter" id="gutter"></div>
           <div class="code">
             <pre id="hl" aria-hidden="true"></pre>
-            <textarea id="sql" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Your T-SQL query"></textarea>
+            <textarea id="sql" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Your SQL query"></textarea>
             <span class="ghost">-- Write the query, then Ctrl+Enter to run</span>
           </div>
         </div>

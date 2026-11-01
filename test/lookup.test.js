@@ -15,7 +15,8 @@ assert.ok(items.some((it) => it.href === '/excel-to-sql/vlookup'));
 assert.ok(items.some((it) => it.href === '/interview'));
 
 const home = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
-assert.ok(home.includes('Realistic data requests from colleagues: read the email, write the T-SQL, get feedback'), 'hero explains the product quickly');
+assert.ok(home.includes('Realistic data requests from colleagues: read the email, write the SQL, get feedback'), 'hero explains the product quickly');
+assert.ok(home.indexOf('data-stack-picker="home"') > home.indexOf('class="lead"') && home.indexOf('data-stack-picker="home"') < home.indexOf('class="hero-ctas"'), 'stack picker sits between the lead and Clock in');
 assert.ok(home.includes('10 free tickets · No sign-up · Start any day'), 'free offer is explicit');
 assert.ok(home.includes('Read the request. Write the query.'), 'pre-demo is short');
 assert.ok(!home.includes('id="find"') && !home.includes('hero-search'), 'hero search moved out of the first screen');

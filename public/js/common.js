@@ -52,7 +52,9 @@ export const store = {
     s.minutes[today] = (s.minutes[today] || 0) + sec / 60;
     save(s);
   },
-  setDraft(id, sql) { const s = this.get(); s.drafts[id] = sql; save(s); },
+  // Drafts are kept per stack, so switching never mixes a PostgreSQL query into the SQL Server one.
+  draft(id) { return this.get().drafts[draftKey(id)]; },
+  setDraft(id, sql) { const s = this.get(); s.drafts[draftKey(id)] = sql; save(s); },
   // Paid comes from the server (the Stripe login cookie), never from this browser's storage.
   isPaid() { return Boolean(me.paid); },
   streak() {
@@ -76,6 +78,78 @@ export const store = {
   },
   completedIds() { return Object.keys(this.get().completed).map(Number); },
 };
+
+// ---------- stack ----------
+// One product, three stacks. The choice lives in this browser; SQL Server is the default.
+export const DIALECTS = {
+  tsql: { label: 'SQL Server (T-SQL)', short: 'SQL Server', server: 'HARBOUR-SQL01', version: 'SQL Server 16.0' },
+  postgres: { label: 'PostgreSQL', short: 'PostgreSQL', server: 'harbour-pg01', version: 'PostgreSQL 16' },
+  mysql: { label: 'MySQL', short: 'MySQL', server: 'harbour-mysql01', version: 'MySQL 8.0' },
+};
+const DIALECT_KEY = 'worksql_dialect';
+
+export function dialect() {
+  try { const d = localStorage.getItem(DIALECT_KEY); return Object.hasOwn(DIALECTS, d || '') ? d : 'tsql'; } catch { return 'tsql'; }
+}
+export function setDialect(d) {
+  if (!Object.hasOwn(DIALECTS, d)) return;
+  try { localStorage.setItem(DIALECT_KEY, d); } catch { /* private mode: the choice lasts this page only */ }
+  document.dispatchEvent(new CustomEvent('worksql:dialect', { detail: d }));
+}
+// SQL Server drafts keep their old keys, so nobody loses work they had before stacks existed.
+const draftKey = (id) => (dialect() === 'tsql' ? id : `${dialect()}:${id}`);
+
+// A name with a space, quoted the way the stack quotes it: [Start Date], "Start Date", `Start Date`.
+export function quoteName(name, d = dialect()) {
+  if (!/\s/.test(name)) return name;
+  return d === 'postgres' ? `"${name}"` : d === 'mysql' ? `\`${name}\`` : `[${name}]`;
+}
+
+// The Messages tab, in the stack's own format.
+const MYSQL_CODES = [
+  [/^Unknown column/, '1054 (42S22)'], [/^Table '.*' doesn't exist/, '1146 (42S02)'], [/^You have an error in your SQL syntax/, '1064 (42000)'],
+  [/^FUNCTION .* does not exist/, '1305 (42000)'], [/^Expression #\d+ of SELECT list is not in GROUP BY/, '1055 (42000)'],
+  [/^In aggregated query without GROUP BY/, '1140 (42000)'], [/^Incorrect parameter count/, '1582 (42000)'],
+  [/is ambiguous/, '1052 (23000)'], [/^Invalid use of group function/, '1111 (HY000)'],
+];
+function tsqlNumber(msg) {
+  if (/^Invalid column/.test(msg)) return 207;
+  if (/^Invalid object/.test(msg)) return 208;
+  if (/^Incorrect syntax/.test(msg)) return 102;
+  if (/not a recognized built-in/.test(msg)) return 195;
+  if (/invalid in the select list/.test(msg)) return 8120;
+  if (/does not exist/.test(msg)) return 911;
+  return 50000;
+}
+export function errorText(msg, hint, d = dialect()) {
+  // The sandbox's own notes are not database errors, so they don't get an error code.
+  if (/^WorkSQL:|^Nothing to run yet|^One query at a time|is switched off here|not supported in this sandbox|^Variables \(|^Temp tables|^The sandbox restarted|^Query timeout/.test(msg)) {
+    return `${msg}${hint ? `\n${hint}` : ''}`;
+  }
+  if (d === 'postgres') return `ERROR:  ${msg}${hint ? `\nHINT:  ${hint}` : ''}`;
+  if (d === 'mysql') return `ERROR ${(MYSQL_CODES.find(([re]) => re.test(msg)) || [0, '1105 (HY000)'])[1]}: ${msg}${hint ? `\n-- ${hint}` : ''}`;
+  return `Msg ${tsqlNumber(msg)}, Level 16, State 1, Line 1\n${msg}${hint ? `\n-- ${hint}` : ''}`;
+}
+
+// The switcher: three buttons, one pressed. onChange runs after the choice is saved.
+export function stackPicker(el, { onChange, label = 'Your stack' } = {}) {
+  if (!el) return;
+  const render = () => {
+    const now = dialect();
+    el.classList.add('stack-picker');
+    el.innerHTML = `${label ? `<span class="stack-label" id="stack-label-${el.dataset.stackPicker || 'x'}">${esc(label)}</span>` : ''}
+      <span class="stack-opts" role="radiogroup" aria-label="${esc(label || 'SQL stack')}">${Object.entries(DIALECTS).map(([k, v]) =>
+  `<button type="button" role="radio" aria-checked="${k === now}" data-d="${k}" class="${k === now ? 'on' : ''}">${esc(v.label)}</button>`).join('')}</span>`;
+  };
+  render();
+  el.addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-d]');
+    if (!b || b.dataset.d === dialect()) return;
+    setDialect(b.dataset.d);
+    if (onChange) onChange(b.dataset.d);
+  });
+  document.addEventListener('worksql:dialect', render);
+}
 
 // ---------- who is this? ----------
 // One call per page. The cookie that answers it is HttpOnly, so only the server can read it.

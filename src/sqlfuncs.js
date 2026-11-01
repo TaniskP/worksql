@@ -136,13 +136,13 @@ function cast(v, type) {
   if (v == null) return null;
   const t = type.replace(/\s+/g, '');
   if (t === 'date') return fmtDate(parseDate(v).d);
-  if (/^(datetime|datetime2|smalldatetime)/.test(t)) return fmtDateTime(parseDate(v).d);
-  if (/^(int|bigint|smallint|tinyint|bit)$/.test(t)) {
+  if (/^(datetime|datetime2|smalldatetime|timestamp)/.test(t)) return fmtDateTime(parseDate(v).d);
+  if (/^(int|bigint|smallint|tinyint|bit|integer|int2|int4|int8|signed|unsigned|signedinteger|unsignedinteger)$/.test(t)) {
     const n = Number(v);
     if (Number.isNaN(n)) throw new Error(`Conversion failed when converting the varchar value '${v}' to data type int.`);
     return Math.trunc(n);
   }
-  if (/^(decimal|numeric|money|smallmoney|float|real)/.test(t)) {
+  if (/^(decimal|numeric|money|smallmoney|float|real|double)/.test(t)) {
     const n = Number(v);
     if (Number.isNaN(n)) throw new Error(`Error converting data type varchar to ${t}.`);
     const scale = t.match(/^(?:decimal|numeric)\(\d+,(\d+)\)/);
@@ -156,6 +156,85 @@ function cast(v, type) {
     return len ? s.slice(0, +len[1]) : s;
   }
   throw new Error(`Type ${type} is not supported in this sandbox yet.`);
+}
+
+// ISO week number, as PostgreSQL's EXTRACT(WEEK ...) and to_char 'IW' give it.
+function isoWeek(d) {
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  t.setUTCDate(t.getUTCDate() + 4 - (t.getUTCDay() || 7));
+  return Math.ceil(((t - Date.UTC(t.getUTCFullYear(), 0, 1)) / 864e5 + 1) / 7);
+}
+
+// EXTRACT(part FROM x) for PostgreSQL and MySQL.
+function extract(p, v) {
+  const x = parseDate(v);
+  if (!x) return null;
+  const d = x.d;
+  switch (String(p).toLowerCase()) {
+    case 'year': return d.getFullYear();
+    case 'quarter': return Math.floor(d.getMonth() / 3) + 1;
+    case 'month': return d.getMonth() + 1;
+    case 'week': return isoWeek(d);
+    case 'day': return d.getDate();
+    case 'hour': return d.getHours();
+    case 'minute': return d.getMinutes();
+    case 'second': return d.getSeconds();
+    case 'dow': return d.getDay();
+    case 'isodow': return d.getDay() || 7;
+    case 'doy': return datepart('dayofyear', v);
+    case 'year_month': return d.getFullYear() * 100 + d.getMonth() + 1;
+    default: throw new Error(`EXTRACT(${p} ...) is not supported in this sandbox yet.`);
+  }
+}
+
+// date_trunc('month', x) in PostgreSQL: weeks start on Monday.
+function pgDateTrunc(p, v) {
+  const x = parseDate(v);
+  if (!x) return null;
+  const d = x.d;
+  if (String(p).toLowerCase() === 'week') return fmtDate(new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7)));
+  if (!/^(year|quarter|month|day)$/i.test(p)) throw new Error(`date_trunc('${p}', ...) is not supported in this sandbox yet.`);
+  return datetrunc(p, v);
+}
+
+// to_char(date, 'YYYY-MM') in PostgreSQL. Names are padded to 9 characters unless FM is used.
+function toChar(v, pattern) {
+  if (v == null || pattern == null) return null;
+  if (typeof v === 'number') throw new Error('to_char on numbers is not supported in this sandbox yet. Use ROUND or CAST.');
+  const d = parseDate(v).d;
+  let fm = false;
+  return String(pattern).replace(/FM|YYYY|YY|MONTH|Month|month|MON|Mon|mon|MM|DAY|Day|day|DY|Dy|dy|DD|HH24|HH12|HH|MI|SS|IW|Q|D/g, (t) => {
+    if (t === 'FM') { fm = true; return ''; }
+    const padName = (n) => (fm ? n : n.padEnd(9, ' '));
+    const num = (n, w) => (fm ? String(n) : pad(n, w));
+    const out = {
+      YYYY: d.getFullYear(), YY: String(d.getFullYear()).slice(2),
+      MONTH: padName(MONTHS[d.getMonth()].toUpperCase()), Month: padName(MONTHS[d.getMonth()]), month: padName(MONTHS[d.getMonth()].toLowerCase()),
+      MON: SHORT_MONTHS[d.getMonth()].toUpperCase(), Mon: SHORT_MONTHS[d.getMonth()], mon: SHORT_MONTHS[d.getMonth()].toLowerCase(),
+      MM: num(d.getMonth() + 1), DD: num(d.getDate()),
+      DAY: padName(DAYS[d.getDay()].toUpperCase()), Day: padName(DAYS[d.getDay()]), day: padName(DAYS[d.getDay()].toLowerCase()),
+      DY: DAYS[d.getDay()].slice(0, 3).toUpperCase(), Dy: DAYS[d.getDay()].slice(0, 3), dy: DAYS[d.getDay()].slice(0, 3).toLowerCase(),
+      HH24: num(d.getHours()), HH12: num(d.getHours() % 12 || 12), HH: num(d.getHours() % 12 || 12), MI: num(d.getMinutes()), SS: num(d.getSeconds()),
+      IW: num(isoWeek(d)), Q: Math.floor(d.getMonth() / 3) + 1, D: d.getDay() + 1,
+    }[t];
+    fm = false;
+    return out;
+  });
+}
+
+// DATE_FORMAT(date, '%Y-%m') in MySQL.
+function dateFormat(v, pattern) {
+  if (v == null || pattern == null) return null;
+  const d = parseDate(v).d;
+  return String(pattern).replace(/%([a-zA-Z%])/g, (all, c) => {
+    const out = {
+      Y: d.getFullYear(), y: String(d.getFullYear()).slice(2), m: pad(d.getMonth() + 1), c: d.getMonth() + 1,
+      d: pad(d.getDate()), e: d.getDate(), M: MONTHS[d.getMonth()], b: SHORT_MONTHS[d.getMonth()],
+      W: DAYS[d.getDay()], a: DAYS[d.getDay()].slice(0, 3), H: pad(d.getHours()), i: pad(d.getMinutes()),
+      s: pad(d.getSeconds()), S: pad(d.getSeconds()), j: pad(datepart('dayofyear', v), 3), '%': '%',
+    }[c];
+    return out === undefined ? c : out;
+  });
 }
 
 function register(db, now) {
@@ -176,6 +255,12 @@ function register(db, now) {
   fn('T_LEN', (v) => (v == null ? null : String(v).replace(/ +$/, '').length));
   fn('T_LEFT', (v, n) => (v == null ? null : String(v).slice(0, Math.max(0, n))));
   fn('T_RIGHT', (v, n) => (v == null ? null : n <= 0 ? '' : String(v).slice(-n)));
+  fn('P_EXTRACT', extract);
+  fn('P_DATE_TRUNC', pgDateTrunc);
+  fn('P_TO_CHAR', toChar);
+  fn('M_DATE_FORMAT', dateFormat);
+  // MySQL's CONCAT gives NULL if any piece is NULL.
+  db.function('M_CONCAT', { varargs: true, deterministic: true }, (...xs) => (xs.some((x) => x == null) ? null : xs.map((x) => (typeof x === 'bigint' ? String(x) : x)).join('')));
   fn('T_CHARINDEX', (needle, hay) => (hay == null || needle == null ? null : String(hay).toLowerCase().indexOf(String(needle).toLowerCase()) + 1));
 }
 

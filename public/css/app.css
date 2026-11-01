@@ -1069,3 +1069,20 @@ body.guides-page .site-header { background: rgba(255, 255, 255, .88); backdrop-f
 
 /* Under the offer: what "ticket" means, for people who've never heard it used this way. */
 .hero-note { margin: 6px 0 0; max-width: 34em; font-size: 13px; line-height: 1.5; color: var(--muted); }
+
+/* ---------- stack picker: SQL Server, PostgreSQL or MySQL ---------- */
+.stack-picker { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; }
+.stack-label { font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.stack-opts { display: inline-flex; flex-wrap: wrap; background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 3px; gap: 2px; }
+.stack-opts button { font: inherit; font-size: 13px; font-weight: 600; color: var(--ink-2); background: none; border: 0; border-radius: 999px; padding: 6px 12px; cursor: pointer; white-space: nowrap; }
+.stack-opts button:hover { color: var(--blue); }
+.stack-opts button.on { background: var(--blue); color: #fff; }
+.stack-opts button:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.hero-stack { margin: 22px 0 -4px; }
+.stack-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin: 0 0 10px; }
+.stack-now { font-size: 13px; color: var(--muted); }
+.stack-now b { color: var(--ink); }
+.lessons-stack { margin-bottom: 18px; }
+@media (max-width: 560px) {
+  .stack-opts button { padding: 6px 9px; font-size: 12.5px; }
+}

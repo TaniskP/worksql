@@ -2,11 +2,13 @@
 // you write the query in a studio window, run it, and send the results to whoever asked.
 // The senior DBA reviews before anything goes out: their short notes are the marks, and the first time
 // a ticket needs something new, they walk you through it in steps.
-import { store, esc, nudgeForm, pingNudge, reviewerName } from '/js/common.js';
+import { store, esc, nudgeForm, pingNudge, reviewerName, dialect, DIALECTS, stackPicker, quoteName, errorText } from '/js/common.js';
 import { attachEditor } from '/js/editor.js';
 
 const $ = (id) => document.getElementById(id);
-const data = await (await fetch('/api/work')).json();
+const stack = dialect();
+const S = DIALECTS[stack];
+const data = await (await fetch(`/api/work?dialect=${stack}`)).json();
 const DAYS = data.days.map((d) => ({ ...d, short: d.name.slice(0, 3) }));
 const R = reviewerName(data.reviewer);
 const paid = () => store.isPaid();
@@ -107,7 +109,7 @@ function clockIn(d) {
   renderInbox();
   showThread(null);
   const next = nextTicket();
-  if (next && unlocked(next)) setTimeout(() => arrive(next), 900);
+  if (next && unlocked(next)) setTimeout(() => { if (!arrived.has(next.id)) arrive(next); }, 900);
   else if (next) showThread(next.id);
 }
 
@@ -132,7 +134,7 @@ function ensureTab(l) {
   const tab = tabs.find((t) => t.ticketId === l.id);
   if (tab) { switchTab(tab); return tab; }
   if (stepsOf(l) && !stepOf.has(l.id) && !closed(l)) stepOf.set(l.id, 0);
-  const t = newQuery({ ticketId: l.id, sql: store.get().drafts[`w${l.id}`] ?? briefOf(l) + ((stepsOf(l) ? l.steps[0].starter : null) ?? l.starter ?? '') });
+  const t = newQuery({ ticketId: l.id, sql: store.draft(`w${l.id}`) ??briefOf(l) + ((stepsOf(l) ? l.steps[0].starter : null) ?? l.starter ?? '') });
   // A walkthrough opens with one line from the senior DBA; the first step sits under it.
   if (stepsOf(l) && !closed(l)) t.note = { kind: 'info', who: R, text: `This one’s new: ${l.topic}. We’ll do it in pieces before anything goes to ${first(l)}.` };
   renderCoach();
@@ -370,7 +372,7 @@ function briefOf(l) {
 let sending = false;
 async function grade(l, step, sql) {
   const r = await fetch('/api/run', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lessonId: l.id, step, sql }),
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lessonId: l.id, step, sql, dialect: stack }),
   });
   if (r.status === 402) return { verdict: { pass: false, headline: 'This ticket is on the paid plan.', detail: 'There’s no active subscription on this browser.' } };
   return r.json();
@@ -454,7 +456,7 @@ function buildTree() {
   const row = (key, depth, label, { icon = '', open = null, cls = '', title = '' } = {}) =>
     `<div class="node ${cls}" data-key="${key}" style="padding-left:${6 + depth * 14}px" title="${esc(title)}">
       <span class="tw">${open === null ? '' : open ? '▾' : '▸'}</span><span class="ic">${icon}</span><span>${label}</span></div>`;
-  let html = row('server', 0, `HARBOUR-SQL01 (SQL Server 16.0 - HARBOUR\\${esc(login())})`, { icon: '🖥', open: expanded.has('server') });
+  let html = row('server', 0, `${S.server} (${S.version} - HARBOUR\\${esc(login())})`,{ icon: '🖥', open: expanded.has('server') });
   if (expanded.has('server')) {
     html += row('dbs', 1, 'Databases', { icon: '📁', open: expanded.has('dbs') });
     if (expanded.has('dbs')) {
@@ -464,13 +466,13 @@ function buildTree() {
         if (expanded.has('tables')) {
           for (const t of data.schema) {
             const k = `t:${t.name}`;
-            html += row(k, 4, `dbo.${esc(t.name)}`, { icon: '▦', open: expanded.has(k), cls: 'table', title: `${t.rows} rows. Right-click for scripts.` });
+            html += row(k, 4, `${SCHEMA_PREFIX}${esc(t.name)}`,{ icon: '▦', open: expanded.has(k), cls: 'table', title: `${t.rows} rows. Right-click for scripts.` });
             if (expanded.has(k)) {
               const ck = `c:${t.name}`;
               html += row(ck, 5, 'Columns', { icon: '📁', open: expanded.has(ck) });
               if (expanded.has(ck)) {
                 for (const c of t.columns) {
-                  const name = /\s/.test(c.name) ? `[${c.name}]` : c.name;
+                  const name = quoteName(c.name, stack);
                   const key = c.key === 'PK' ? '<span class="key">🔑</span>' : c.key === 'FK' ? '<span class="key">⚷</span>' : '';
                   html += row(`col:${t.name}:${c.name}`, 6, `${key} ${esc(name)} <span class="ty">(${c.key ? c.key + ', ' : ''}${esc(c.type)}, ${c.nullable ? 'null' : 'not null'})</span>`,
                     { icon: '▫', cls: 'col', title: 'Double-click to insert' });
@@ -503,12 +505,43 @@ $('tree').addEventListener('click', (e) => {
   }
 });
 
+// ================= the stack =================
+// The same desk in SQL Server, PostgreSQL or MySQL: server name, scripts and quoting follow the stack.
+const SCHEMA_PREFIX = stack === 'tsql' ? 'dbo.' : '';
+const peekQuery = (name, n) => (stack === 'tsql' ? `SELECT TOP ${n} * FROM dbo.${name}` : `SELECT * FROM ${name} LIMIT ${n}`);
+function scriptTop(table) {
+  if (stack === 'tsql') {
+    const cols = table.columns.map((c) => `[${c.name}]`);
+    return `/****** Script for SelectTopNRows command  ******/\nSELECT TOP (1000) ${cols.join('\n      ,')}\n  FROM [Harbour].[dbo].[${table.name}]`;
+  }
+  return `SELECT ${table.columns.map((c) => quoteName(c.name, stack)).join('\n      ,')}\n  FROM ${table.name}\n LIMIT 1000`;
+}
+function scriptSelect(table) {
+  if (stack === 'tsql') {
+    const cols = table.columns.map((c) => `[${c.name}]`);
+    return `USE [Harbour]\nGO\n\nSELECT ${cols.join('\n      ,')}\n  FROM [dbo].[${table.name}]\nGO`;
+  }
+  const q = (n) => (stack === 'mysql' ? `\`${n}\`` : `"${n}"`);
+  return `SELECT ${table.columns.map((c) => q(c.name)).join('\n      ,')}\n  FROM ${q(stack === 'mysql' ? 'harbour' : 'public')}.${q(table.name)};`;
+}
+// Switching stack mid-ticket: same day, same ticket, reloaded with that stack's starter and steps.
+function switchStack() {
+  const params = new URLSearchParams({ go: '1' });
+  if (day) params.set('day', day.id);
+  const open = activeTab && activeTab.ticketId ? activeTab.ticketId : openId;
+  if (open) params.set('open', open);
+  location.href = `/work?${params}`;
+}
+stackPicker(document.querySelector('[data-stack-picker="work"]'), { onChange: switchStack, label: '' });
+$('sb-server').textContent = `${S.server} (${S.version})`;
+stackPicker(document.querySelector('[data-stack-picker="clockin"]'), { onChange: () => location.reload() });
+
 // ================= table guide =================
 function showTableInfo(name) {
   const t = data.schema.find((x) => x.name === name);
   const box = $('table-info');
-  const peekSql = `SELECT TOP 10 * FROM dbo.${t.name}`;
-  box.innerHTML = `<div class="ti-head"><b>dbo.${esc(t.name)}</b><button class="ti-x" title="Close">✕</button></div>
+  const peekSql = peekQuery(t.name, 10);
+  box.innerHTML = `<div class="ti-head"><b>${SCHEMA_PREFIX}${esc(t.name)}</b><button class="ti-x" title="Close">✕</button></div>
     <div class="ti-meta">${t.rows} rows · ${t.columns.length} columns</div>
     <p>${esc(t.description || '')}</p>
     <div class="ti-try">Peek at the first 10 rows:<code>${esc(peekSql)}</code></div>
@@ -536,7 +569,7 @@ $('tree').addEventListener('dblclick', (e) => {
   const n = e.target.closest('.node');
   if (!n) return;
   const k = n.dataset.key;
-  if (k.startsWith('col:')) { const c = k.split(':')[2]; editor.insert(/\s/.test(c) ? `[${c}]` : c); }
+  if (k.startsWith('col:')) { const c = k.split(':')[2]; editor.insert(quoteName(c, stack)); }
   else if (k.startsWith('t:')) {
     expanded.has(k) ? expanded.delete(k) : expanded.add(k);
     expanded.add(`c:${k.slice(2)}`);
@@ -556,14 +589,13 @@ $('tree').addEventListener('contextmenu', (e) => {
   menu.onclick = (ev) => {
     const a = ev.target.dataset.a;
     menu.hidden = true;
-    const cols = table.columns.map((c) => `[${c.name}]`);
     if (a === 'top') {
-      newQuery({ sql: `/****** Script for SelectTopNRows command  ******/\nSELECT TOP (1000) ${cols.join('\n      ,')}\n  FROM [Harbour].[dbo].[${table.name}]` });
+      newQuery({ sql: scriptTop(table) });
       execute();
     } else if (a === 'script') {
-      newQuery({ sql: `USE [Harbour]\nGO\n\nSELECT ${cols.join('\n      ,')}\n  FROM [dbo].[${table.name}]\nGO` });
-    } else if (a === 'name') editor.insert(`dbo.${table.name}`);
-    else if (a === 'count') { newQuery({ sql: `SELECT COUNT(*) AS row_count FROM dbo.${table.name}` }); execute(); }
+      newQuery({ sql: scriptSelect(table) });
+    } else if (a === 'name') editor.insert(`${SCHEMA_PREFIX}${table.name}`);
+    else if (a === 'count') { newQuery({ sql: `SELECT COUNT(*) AS row_count FROM ${SCHEMA_PREFIX}${table.name}` }); execute(); }
   };
 });
 document.addEventListener('click', (e) => { if (!e.target.closest('#ctx')) $('ctx').hidden = true; });
@@ -590,7 +622,7 @@ function switchTab(tab) {
   renderResult(tab);
   renderCoach();
   const who = tab.ticketId ? ` (${first(data.lessons.find((l) => l.id === tab.ticketId))})` : '';
-  $('win-title').textContent = `${tab.name}${who} - HARBOUR-SQL01.Harbour (HARBOUR\\${login()}) - Harbour SQL Studio`;
+  $('win-title').textContent = `${tab.name}${who} - ${S.server}.Harbour (HARBOUR\\${login()}) - Harbour SQL Studio · ${S.label}`;
 }
 
 function renderTabs() {
@@ -617,15 +649,6 @@ $('doc-tabs').addEventListener('click', (e) => {
 // ================= execute / parse =================
 const stamp = () => new Date().toISOString().replace('Z', '0000+00:00');
 const dur = (ms) => `00:00:${String(Math.min(59, Math.floor(ms / 1000))).padStart(2, '0')}`;
-function errNo(msg) {
-  if (/^Invalid column/.test(msg)) return 207;
-  if (/^Invalid object/.test(msg)) return 208;
-  if (/^Incorrect syntax/.test(msg)) return 102;
-  if (/not a recognized built-in/.test(msg)) return 195;
-  if (/invalid in the select list/.test(msg)) return 8120;
-  if (/does not exist/.test(msg)) return 911;
-  return 50000;
-}
 
 let running = false;
 async function execute() {
@@ -637,7 +660,7 @@ async function execute() {
   setStatus('run', 'Executing query...');
   $('sb-left').textContent = 'Executing...';
   try {
-    const r = await fetch('/api/query', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sql }) }).then((x) => x.json());
+    const r = await fetch('/api/query', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sql, dialect: stack }) }).then((x) => x.json());
     tab.result = { ...r, sql };
     if (tab === activeTab) renderResult(tab);
     // First run: the results pane appears. And the thread's next move updates (check, send, or fix).
@@ -648,7 +671,7 @@ async function execute() {
     renderCoach();
     emit('run', { ok: !r.error, error: r.error, rows: r.rows ? r.rows.length : 0 });
   } catch {
-    setStatus('err', 'Lost connection to HARBOUR-SQL01. Is the server running?');
+    setStatus('err', `Lost connection to ${S.server}. Is the server running?`);
   } finally {
     running = false;
     $('sb-left').textContent = 'Ready';
@@ -656,15 +679,15 @@ async function execute() {
 }
 
 async function parse() {
-  const r = await fetch('/api/parse', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sql: editor.selectedOrAll }) }).then((x) => x.json());
+  const r = await fetch('/api/parse', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sql: editor.selectedOrAll, dialect: stack }) }).then((x) => x.json());
   showRes('msg');
-  $('res-msg').innerHTML = r.error ? `<span class="err">Msg ${errNo(r.error)}, Level 16, State 1, Line 1\n${esc(r.error)}</span>` : 'Commands completed successfully.';
+  $('res-msg').innerHTML = r.error ? `<span class="err">${esc(errorText(r.error, r.hint, stack))}</span>` : 'Commands completed successfully.';
   setStatus(r.error ? 'err' : 'ok', r.error ? 'Parse failed.' : 'Commands completed successfully.');
 }
 
 function setStatus(kind, text) {
   $('query-status').className = `query-status ${kind}`;
-  $('query-status').innerHTML = `<span>${esc(text)}</span><span style="margin-left:auto">HARBOUR-SQL01 | Harbour</span>`;
+  $('query-status').innerHTML = `<span>${esc(text)}</span><span style="margin-left:auto">${esc(S.server)} | Harbour | ${esc(S.label)}</span>`;
 }
 
 function showRes(which) {
@@ -693,7 +716,7 @@ function renderResult(tab) {
   $('sb-time').textContent = dur(r.ms || 0);
   if (r.error) {
     $('res-grid').innerHTML = '';
-    $('res-msg').innerHTML = `<span class="err">Msg ${errNo(r.error)}, Level 16, State 1, Line 1\n${esc(r.error)}</span>\n\nCompletion time: ${stamp()}`;
+    $('res-msg').innerHTML = `<span class="err">${esc(errorText(r.error, r.hint, stack))}</span>\n\nCompletion time: ${stamp()}`;
     setStatus('err', 'Query completed with errors.');
     $('sb-rows').textContent = '0 rows';
     showRes('msg');
@@ -748,7 +771,7 @@ const TOUR_KEY = 'worksql.tour';
 function tourDone() { try { return localStorage.getItem(TOUR_KEY) === 'done'; } catch { return false; } }
 function markTourDone() { try { localStorage.setItem(TOUR_KEY, 'done'); } catch { /* private mode: tour shows again next time */ } }
 
-const FIRST_QUERY = 'SELECT TOP 10 * FROM dbo.Customers';
+const FIRST_QUERY = peekQuery('Customers', 10);
 let tourAt = -1;
 let tourOff = [];
 
@@ -764,7 +787,7 @@ function tourSteps() {
     { target: '.explorer', title: 'Columns', body: 'Those are its <b>columns</b>: the headings of the grid. 🔑 marks the ID that makes every row unique.<br><br>Columns tell you <i>what</i> is stored. To see the actual <b>rows</b>, you ask the database with a query.' },
     { target: '#editor', title: 'Your first query', body: `This is the query window. Type this in yourself, or let us paste it:<code>${FIRST_QUERY}</code>Then hit <b>▶ Run</b> below.<br><span class="tour-small">In plain English: “show me the first 10 rows of Customers”. Later, <b>F5</b> does the same, like in SSMS.</span>`,
       buttons: [['▶ Run', 'run'], ['Use in editor', 'use']], wait: 'run', waiting: 'Waiting for you to run it…' },
-    { target: '#results-pane', title: 'The results', body: 'That’s your answer. Each line is a <b>row</b>: one customer. The grey numbers down the left just count them.<br><br>If something goes wrong, the <b>Messages</b> tab says why, in SQL Server’s own words.' },
+    { target: '#results-pane', title: 'The results', body: `That’s your answer. Each line is a <b>row</b>: one customer. The grey numbers down the left just count them.<br><br>If something goes wrong, the <b>Messages</b> tab says why, in ${S.short}’s own words.` },
     { target: '.explorer', title: 'Look around', body: 'Every table works the same way. <b>Click any table name</b> to see what’s in it, with a peek query you can drop into the editor.<br><br>Orders and Products are good ones to try.' },
     { target: '.thread-actions', title: `Back to ${esc(who)}`, body: `Now the real ticket. Read ${esc(who)}’s message, write the query in ${esc(who)}’s tab, press <b>F5</b>, then <b>Send results to ${esc(who)}</b>.<br><br>Stuck? <b>Ask Kwame</b> for a pointer. He won’t write it for you.`,
       buttons: [['Start the ticket', 'done']] },
@@ -838,7 +861,7 @@ function renderTour() {
         setTimeout(tourNext, 600);
       } else {
         const w = card.querySelector('.tour-wait');
-        if (w) w.innerHTML = '<b>Close.</b> SQL Server didn’t like something: check the spelling against the line above and hit ▶ Run again.';
+        if (w) w.innerHTML = `<b>Close.</b> ${S.short} didn’t like something: check the spelling against the line above and hit ▶ Run again.`;
       }
     }));
   }
@@ -885,9 +908,21 @@ function celebrate(text) {
 $('t-tour').addEventListener('click', startTour);
 
 // Homepage Clock in free skips the arrival screen; /work from the header still shows it.
-if (new URLSearchParams(location.search).has('go')) {
-  const pick = DAYS.find((d) => dayTickets(d).some((l) => !closed(l) && unlocked(l))) || DAYS[0];
+const params = new URLSearchParams(location.search);
+if (params.has('go')) {
+  // ?day= and ?open= come back from a stack switch: same day, same ticket, new stack.
+  const pick = DAYS.find((d) => d.id === Number(params.get('day')))
+    || DAYS.find((d) => dayTickets(d).some((l) => !closed(l) && unlocked(l))) || DAYS[0];
   clockIn(pick);
+  const reopen = tickets.find((l) => l.id === Number(params.get('open')));
+  if (reopen && unlocked(reopen)) {
+    arrived.add(reopen.id);
+    clockMin = Math.max(clockMin, reopen.arrives);
+    tickClock();
+    renderInbox();
+    openTicket(reopen.id);
+    openQueryWindow(reopen);
+  }
 } else {
   renderClockIn();
 }

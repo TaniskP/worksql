@@ -35,8 +35,8 @@ function call(msg) {
 }
 
 module.exports = {
-  run: (sql) => call({ op: 'run', sql }),
-  parse: (sql) => call({ op: 'parse', sql }),
+  run: (sql, dialect = 'tsql') => call({ op: 'run', sql, dialect }),
+  parse: (sql, dialect = 'tsql') => call({ op: 'parse', sql, dialect }),
   counts: () => call({ op: 'counts' }),
   preview: (table, n = 3) => call({ op: 'preview', table, n }),
   today: () => call({ op: 'today' }),

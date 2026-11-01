@@ -59,7 +59,7 @@ function checkColumns(user, expected, sql) {
     // Same shape: if the values line up, it is only the headers that are wrong.
     if (sameRows(user.rows, expected.rows)) {
       const pairs = user.columns.map((c, i) => [c, expected.columns[i]]).filter(([a, b]) => lc(a) !== lc(b));
-      const fix = pairs.map(([a, b]) => (a === '(No column name)' ? `the unnamed column should be ${b}` : `${a} should be called ${b}`));
+      const fix = pairs.map(([a, b]) => (a === '(No column name)' || a === '?column?' ?`the unnamed column should be ${b}` : `${a} should be called ${b}`));
       return fail('Numbers are right. Headers aren’t.', `Name them with AS: ${fix.join('; ')}.`);
     }
   }
@@ -69,7 +69,15 @@ function checkColumns(user, expected, sql) {
   return fail('Wrong columns.', `I need ${want}.`);
 }
 
-function check(spec, user, expected, { today, sql }) {
+// A column name with a space, quoted the way the stack quotes it.
+function quoteName(c, dialect) {
+  if (!/\s/.test(c)) return c;
+  if (dialect === 'postgres') return `"${c}"`;
+  if (dialect === 'mysql') return '`' + c + '`';
+  return `[${c}]`;
+}
+
+function check(spec, user, expected, { today, sql, dialect = 'tsql' }) {
   const colIssue = checkColumns(user, expected, sql);
   if (colIssue) return colIssue;
 
@@ -81,7 +89,7 @@ function check(spec, user, expected, { today, sql }) {
   if (!extraIdx.length && !missingIdx.length) {
     if (spec.orderBy) {
       const o = spec.orderBy[0];
-      const sortText = `ORDER BY ${spec.orderBy.map((x) => (/\s/.test(x.col) ? `[${x.col}]` : x.col) + (x.desc ? ' DESC' : '')).join(', ')}`;
+      const sortText = `ORDER BY ${spec.orderBy.map((x) => quoteName(x.col, dialect) +(x.desc ? ' DESC' : '')).join(', ')}`;
       if (!/order\s+by/i.test(stripComments(sql).replace(/over\s*\([^)]*\)/gi, ''))) {
         return fail('Right rows, not sorted.', `Add ${sortText}. Without it the order is luck, and next week it changes.`);
       }
@@ -95,7 +103,7 @@ function check(spec, user, expected, { today, sql }) {
   }
 
   const ctx = {
-    user, expected, today, sql,
+    user, expected, today, sql, dialect,
     extra: extraIdx.map((i) => user.rows[i]),
     missing: missingIdx.map((i) => expected.rows[i]),
     col: (name) => expected.columns.findIndex((c) => lc(c) === lc(name)),

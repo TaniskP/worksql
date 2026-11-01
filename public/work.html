@@ -27,6 +27,7 @@
         <div class="field">Which day?</div>
         <div class="days" id="ci-days"></div>
       </div>
+      <div class="ci-stack" data-stack-picker="clockin"></div>
       <button class="btn btn-primary btn-lg" type="submit" style="width:100%">Clock in</button>
       <p class="ci-small">Free. No sign-up. Progress stays in this browser.</p>
     </form>
@@ -46,6 +47,7 @@
       <button class="tool" id="t-new" title="New Query"><span class="ti">＋</span> New Query</button>
       <span class="sep"></span>
       <label class="db-pick" title="Available databases"><select disabled><option>Harbour</option></select></label>
+      <div class="tb-stack" data-stack-picker="work" title="Your stack: the query window runs and marks in this one"></div>
       <button class="tool exec" id="t-exec" title="Execute (F5)"><span class="ti play">▶</span> Execute</button>
       <button class="tool" id="t-parse" title="Parse (Ctrl+F5)"><span class="ti">✓</span> Parse</button>
       <span class="sep"></span>
@@ -94,7 +96,7 @@
     <footer class="statusbar">
       <span id="sb-left">Ready</span>
       <span class="spacer"></span>
-      <span>HARBOUR-SQL01 (16.0)</span>
+      <span id="sb-server">HARBOUR-SQL01 (16.0)</span>
       <span id="sb-login"></span>
       <span>Harbour</span>
       <span id="sb-time">00:00:00</span>

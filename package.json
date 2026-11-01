@@ -9,6 +9,6 @@
   },
   "scripts": {
     "start": "node --env-file-if-exists=.env --disable-warning=ExperimentalWarning server.js",
-    "test": "node --disable-warning=ExperimentalWarning test/lessons.test.js && node --disable-warning=ExperimentalWarning test/nudges.test.js && node --disable-warning=ExperimentalWarning test/payments.test.js && node --disable-warning=ExperimentalWarning test/restore.test.js && node --disable-warning=ExperimentalWarning test/articles.test.js && node --disable-warning=ExperimentalWarning test/tools.test.js && node --disable-warning=ExperimentalWarning test/hubs.test.js && node --disable-warning=ExperimentalWarning test/nav-widgets.test.js && node --disable-warning=ExperimentalWarning test/lookup.test.js"
+    "test": "node --disable-warning=ExperimentalWarning test/lessons.test.js && node --disable-warning=ExperimentalWarning test/nudges.test.js && node --disable-warning=ExperimentalWarning test/payments.test.js && node --disable-warning=ExperimentalWarning test/restore.test.js && node --disable-warning=ExperimentalWarning test/articles.test.js && node --disable-warning=ExperimentalWarning test/tools.test.js && node --disable-warning=ExperimentalWarning test/hubs.test.js && node --disable-warning=ExperimentalWarning test/nav-widgets.test.js && node --disable-warning=ExperimentalWarning test/lookup.test.js && node --disable-warning=ExperimentalWarning test/stacks.test.js"
   }
 }
