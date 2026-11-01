@@ -1037,3 +1037,26 @@ body.guides-page .site-header { background: rgba(255, 255, 255, .88); backdrop-f
 .seo-prose a { color: var(--blue); text-decoration: underline; text-decoration-color: rgba(31, 94, 255, .35); text-underline-offset: 3px; }
 .seo-prose a:hover { text-decoration-color: currentColor; }
 .seo-prose code { font-family: var(--mono); font-size: .88em; background: #f1f4f9; padding: 1px 5px; border-radius: 4px; color: var(--ink); }
+/* ---------- cookie notice (first visit; same look as cvonpoint.com) ---------- */
+.cookie-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 90; background: #0e172a; color: #f0f1f5; border-top: 1px solid rgba(255,255,255,.1);
+  box-shadow: 0 -10px 30px rgba(0,0,0,.18); font-family: Inter, 'Segoe UI', system-ui, sans-serif; transform: translateY(100%); opacity: 0; transition: transform .4s ease-out, opacity .4s ease-out; }
+.cookie-bar.in { transform: none; opacity: 1; }
+.cookie-inner { position: relative; max-width: 1152px; margin: 0 auto; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+.cookie-copy { max-width: 48rem; padding-right: 32px; }
+.cookie-copy p { margin: 0; font-size: 14px; line-height: 1.6; color: rgba(255,255,255,.9); }
+.cookie-copy a { color: inherit; text-decoration: underline; text-decoration-color: rgba(255,255,255,.5); text-underline-offset: 2px; }
+.cookie-copy a:hover { text-decoration-color: #fff; }
+.cookie-prefs { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 6px; font-size: 13.5px; line-height: 1.5; color: rgba(255,255,255,.82); }
+.cookie-prefs[hidden] { display: none; }
+.cookie-prefs b { color: #fff; font-weight: 600; }
+.cookie-prefs code { font-family: var(--mono); font-size: 12px; background: rgba(255,255,255,.1); padding: 0 4px; border-radius: 3px; }
+.cookie-btns { display: flex; flex-direction: column; gap: 8px; flex: none; }
+.cookie-btns button { background: #22345e; color: #fff; border: 0; border-radius: 14px; padding: 8px 16px; font: 500 14px Inter, 'Segoe UI', system-ui, sans-serif; cursor: pointer; white-space: nowrap; transition: background .15s; }
+.cookie-btns button:hover { background: #2c4377; }
+.cookie-btns button:focus-visible, .cookie-x:focus-visible { outline: 2px solid #9db4ff; outline-offset: 2px; }
+.cookie-x { position: absolute; right: 12px; top: 12px; background: none; border: 0; padding: 2px; color: rgba(255,255,255,.7); cursor: pointer; }
+.cookie-x:hover { color: #fff; }
+@media (min-width: 640px) {
+  .cookie-inner { flex-direction: row; align-items: center; gap: 32px; }
+  .cookie-btns { width: 208px; margin-left: auto; }
+}

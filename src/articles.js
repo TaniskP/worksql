@@ -661,6 +661,7 @@ function page({ title, description, body, canonical, shell }) {
   <main>${body}</main>
   <footer class="footer">${footerInner()}</footer>
   <script type="module" src="/js/back.js"></script>
+  <script type="module" src="/js/cookies.js"></script>
 </body>
 </html>`;
 }

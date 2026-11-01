@@ -41,6 +41,14 @@
   <main class="article">
     <h1>Privacy</h1>
     <p class="lede">WorkSQL is a practice product. Queries run in our sandbox against a fake company. We never see your work database.</p>
+    <h2 id="cookies">Cookies and storage</h2>
+    <p>WorkSQL only uses storage the site needs to work. There are no analytics, advertising cookies or tracking pixels.</p>
+    <ul>
+      <li><b>Essential.</b> A cookie named <code>wsql</code>, set only after you pay, so this browser stays signed in to the paid plan. It lasts about a year and only our server can read it. Stripe sets its own cookies on its checkout page.</li>
+      <li><b>Preferences, on your device.</b> Your progress, streak, query drafts and settings (the inbox ping, demo sound, whether you’ve seen the tour, your cookie choice) are kept in your browser’s local storage. The Back button remembers your scroll position for the current tab only.</li>
+      <li><b>Fonts.</b> Text fonts load from Google Fonts, which does not set cookies.</li>
+    </ul>
+    <p><button type="button" class="btn btn-ghost" data-cookie-settings>Change cookie choice</button></p>
     <h2>What stays in this browser</h2>
     <p>Free progress, the daily streak and demo sound preference are stored in localStorage on your device. Clearing the site data resets that progress.</p>
     <h2>What we store if you pay</h2>
@@ -58,6 +66,7 @@
     </div>
   </footer>
   <script type="module" src="/js/back.js"></script>
+  <script type="module" src="/js/cookies.js"></script>
   <script type="module">
     import { icons } from '/js/common.js';
     document.querySelector('[data-logo]').insertAdjacentHTML('afterbegin', icons.logo);
