@@ -1064,3 +1064,5 @@ body.guides-page .site-header { background: rgba(255, 255, 255, .88); backdrop-f
   .cookie-inner { flex-direction: row; align-items: center; gap: 32px; }
   .cookie-btns { width: 208px; margin-left: auto; }
 }
+/* Privacy, support and terms: the same reading column, centred on the page. */
+.article.legal { max-width: calc(760px + 2 * var(--gutter)); margin: 0 auto; }
