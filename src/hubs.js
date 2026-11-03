@@ -360,6 +360,10 @@ function renderInterviewIndex(origin) {
           <input id="q" name="q" type="search" placeholder="Search prompts… e.g. top N, running total, anti-join" autocomplete="off">
           <button class="btn btn-primary" type="submit">Search</button>
         </form>
+        <div class="iv-mock">
+          <div><b>Interview tomorrow?</b> Take a timed mock shift: real tickets, no walkthroughs, marked strictly, with a score at the end.</div>
+          <a class="btn btn-primary" href="/work?mock=1">Start a mock shift <span aria-hidden="true">→</span></a>
+        </div>
       </div>
     </section>
     <div class="g-body">

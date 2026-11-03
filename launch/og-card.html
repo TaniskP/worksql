@@ -1,0 +1,57 @@
+<!doctype html>
+<!-- Source for public/img/og.png (1200x630), the link preview on Product Hunt, LinkedIn, X and Slack.
+     Re-render with: node launch/render-og.js -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap">
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  html, body { width: 1200px; height: 630px; overflow: hidden; }
+  body { font-family: Inter, 'Segoe UI', sans-serif; background: #0b1733; color: #fff; position: relative; }
+  .glow { position: absolute; inset: 0; background: radial-gradient(700px 420px at 92% 8%, rgba(31,94,255,.55), transparent 70%), radial-gradient(500px 300px at 0% 100%, rgba(31,94,255,.18), transparent 70%); }
+  .left { position: absolute; left: 72px; top: 64px; width: 560px; }
+  .logo { display: flex; align-items: center; gap: 12px; font-weight: 800; font-size: 30px; color: #dfe8ff; }
+  .logo svg { width: 38px; height: 38px; }
+  h1 { font-size: 66px; line-height: 1.04; letter-spacing: -0.035em; font-weight: 800; margin-top: 70px; }
+  p { font-size: 25px; line-height: 1.4; color: #c7d2fe; margin-top: 24px; font-weight: 500; }
+  .chips { display: flex; gap: 10px; margin-top: 34px; }
+  .chip { border: 1.5px solid rgba(199,210,254,.35); border-radius: 999px; padding: 8px 16px; font-size: 18px; font-weight: 600; color: #dfe8ff; }
+  .chip.free { background: #16a34a; border-color: #16a34a; color: #fff; }
+  .card { position: absolute; right: 64px; top: 92px; width: 440px; background: #fff; color: #0b1733; border-radius: 16px; box-shadow: 0 30px 80px rgba(0,0,0,.45); overflow: hidden; }
+  .bar { background: #eef1f6; padding: 10px 16px; font-size: 14px; color: #6b7690; font-weight: 600; display: flex; justify-content: space-between; }
+  .mail { padding: 18px 20px 14px; border-bottom: 1px solid #e4e8f0; }
+  .who { display: flex; gap: 10px; align-items: center; font-size: 16px; font-weight: 700; }
+  .av { width: 34px; height: 34px; border-radius: 50%; background: #c2410c; color: #fff; display: grid; place-items: center; font-size: 13px; }
+  .role { font-weight: 500; color: #6b7690; font-size: 13px; }
+  .ask { font-size: 17px; line-height: 1.4; margin-top: 10px; color: #33415c; }
+  pre { font-variant-ligatures: none; font-family: 'JetBrains Mono', monospace; font-size: 15px; line-height: 1.6; background: #0f1d3d; color: #e6ecff; padding: 16px 20px; margin: 0; }
+  .k { color: #7aa2ff; } .f { color: #f5b53d; } .s { color: #86efac; }
+  .ok { display: flex; gap: 12px; align-items: center; padding: 14px 20px; background: #ecfbf1; font-size: 16px; font-weight: 700; color: #15803d; }
+  .ok svg { width: 28px; height: 28px; flex: none; }
+  .ok span { font-weight: 500; color: #33415c; font-size: 14px; display: block; }
+</style>
+</head>
+<body>
+  <div class="glow"></div>
+  <div class="left">
+    <div class="logo"><svg viewBox="0 0 32 32" fill="none"><ellipse cx="16" cy="7" rx="11" ry="4" fill="#4f7dff"/><path d="M5 7v6c0 2.2 4.9 4 11 4s11-1.8 11-4V7c0 2.2-4.9 4-11 4S5 9.2 5 7Z" fill="#4f7dff" opacity=".85"/><path d="M5 15v5c0 2.2 4.9 4 11 4s11-1.8 11-4v-5c0 2.2-4.9 4-11 4S5 17.2 5 15Z" fill="#4f7dff" opacity=".7"/><path d="M5 22v3c0 2.2 4.9 4 11 4s11-1.8 11-4v-3c0 2.2-4.9 4-11 4S5 24.2 5 22Z" fill="#4f7dff" opacity=".55"/></svg>WorkSQL</div>
+    <h1>A ticket lands.<br>You write the query.</h1>
+    <p>Practise SQL on real requests from colleagues, marked by a senior DBA before it goes out.</p>
+    <div class="chips"><span class="chip">SQL Server</span><span class="chip">PostgreSQL</span><span class="chip">MySQL</span><span class="chip free">10 free</span></div>
+  </div>
+  <div class="card">
+    <div class="bar"><span>Inbox · Harbour &amp; Co</span><span>Mon 09:14</span></div>
+    <div class="mail">
+      <div class="who"><span class="av">HR</span><div>Harvey Rowe<div class="role">Sales Manager</div></div></div>
+      <div class="ask">Can you pull last week’s orders over £50? Newest first.</div>
+    </div>
+<pre><span class="k">SELECT</span> order_id, customer_id, total_amount
+  <span class="k">FROM</span> Orders
+ <span class="k">WHERE</span> total_amount <span class="k">&gt;</span> <span class="s">50</span>
+   <span class="k">AND</span> order_date <span class="k">&gt;=</span> <span class="f">DATEADD</span>(day, <span class="s">-7</span>, …)
+ <span class="k">ORDER BY</span> order_date <span class="k">DESC</span>;</pre>
+    <div class="ok"><svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="15" fill="#16a34a"/><path d="M9.5 16.5l4.5 4.5 8.5-9" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg><div>Sent to Harvey<span>“Perfect, that’s exactly it. Thanks.”</span></div></div>
+  </div>
+</body>
+</html>

@@ -42,19 +42,25 @@
     <h1>Privacy</h1>
     <p class="lede">WorkSQL is a practice product. Queries run in our sandbox against a fake company. We never see your work database.</p>
     <h2 id="cookies">Cookies and storage</h2>
-    <p>WorkSQL only uses storage the site needs to work. There are no analytics, advertising cookies or tracking pixels.</p>
+    <p>WorkSQL only uses storage the site needs to work. There are no third-party analytics, advertising cookies or tracking pixels.</p>
     <ul>
-      <li><b>Essential.</b> A cookie named <code>wsql</code>, set only after you pay, so this browser stays signed in to the paid plan. It lasts about a year and only our server can read it. Stripe sets its own cookies on its checkout page.</li>
+      <li><b>Essential.</b> A cookie named <code>wsql</code>, set only after you pay or open a “save my progress” link, so this browser stays signed in. It lasts about a year and only our server can read it. Stripe sets its own cookies on its checkout page.</li>
       <li><b>Preferences, on your device.</b> Your progress, streak, query drafts and settings (the inbox ping, demo sound, whether you’ve seen the tour, your cookie choice) are kept in your browser’s local storage. The Back button remembers your scroll position for the current tab only.</li>
       <li><b>Fonts.</b> Text fonts load from Google Fonts, which does not set cookies.</li>
     </ul>
     <p><button type="button" class="btn btn-ghost" data-cookie-settings>Change cookie choice</button></p>
     <h2>What stays in this browser</h2>
-    <p>Free progress, the daily streak and demo sound preference are stored in localStorage on your device. Clearing the site data resets that progress.</p>
+    <p>Free progress, the daily streak and demo sound preference are stored in localStorage on your device. Clearing the site data resets that progress, unless you saved it by email.</p>
+    <h2>If you save your progress</h2>
+    <p>If you ask us to email you a progress link, or you’ve paid, we keep a copy of your progress on our server under that email, so it follows you to another device: which tickets you closed and when, time practised per day, the query that closed each ticket, the senior DBA’s notes on attempts that were held back, mock shift scores, and the first name you gave. Query drafts stay on your device. Ask us at the Support page and we’ll delete it.</p>
     <h2>What we store if you pay</h2>
     <p>Checkout is handled by Stripe. We keep the email from that checkout so we can restore access on another browser. A session cookie named <code>wsql</code> marks this browser as paid. We do not sell that email.</p>
+    <h2>Counting visits</h2>
+    <p>To know whether the site is working, our own server counts events per day: page views of a few pages, clock-ins, tickets closed, checkouts started, progress saves, share-card downloads. Each one is a number added to that day’s total. No IP address, email, cookie or device ID is stored with it, and nothing is sent to a third party.</p>
+    <h2>Teams waitlist</h2>
+    <p>If you join the Teams waitlist we keep that email and the seat count you gave, and email once when Teams opens.</p>
     <h2>Email</h2>
-    <p>If you ask us to restore access, or you opt in to a “still waiting” nudge, we send mail through Resend. You can unsubscribe from nudges on any of those messages.</p>
+    <p>If you ask us to restore access, ask for a progress link, or opt in to a “still waiting” nudge, we send mail through Resend. You can unsubscribe from nudges on any of those messages.</p>
     <h2>Tools and converters</h2>
     <p>Formatters, translators and the interview sandbox run in the browser. Pasted SQL is not uploaded.</p>
     <p><a href="/support">Support</a> · <a href="/terms">Terms</a></p>

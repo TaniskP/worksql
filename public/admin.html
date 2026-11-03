@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Launch desk · WorkSQL</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
+  <link rel="stylesheet" href="/css/app.css">
+  <style>
+    .admin { max-width: 1000px; margin: 0 auto; padding: 32px 16px 64px; }
+    .admin h1 { font-size: 28px; margin-bottom: 4px; }
+    .admin .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 16px 0; }
+    .admin .k { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+    .admin .k span { display: block; font-size: 12px; color: var(--muted); }
+    .admin .k b { font-size: 20px; }
+    .admin .k.bad { border-color: #f6c5c5; background: #fdecec; }
+    .admin .k.good b { color: #15803d; }
+    .admin form { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .admin input, .admin select { height: 38px; border: 1px solid var(--line); border-radius: 8px; padding: 0 10px; font: inherit; font-size: 14px; }
+    .admin input[name=message] { flex: 1; min-width: 240px; }
+    .admin .table-wrap { overflow-x: auto; }
+    .admin table { border-collapse: collapse; width: 100%; font-size: 13px; background: var(--card); }
+    .admin th, .admin td { padding: 7px 9px; border-bottom: 1px solid var(--line-2); text-align: right; white-space: nowrap; }
+    .admin th:first-child, .admin td:first-child { text-align: left; }
+    .admin th { color: var(--muted); font-weight: 600; font-size: 12px; }
+    .admin .note { color: var(--muted); font-size: 13px; }
+  </style>
+</head>
+<body class="app">
+  <main class="admin">
+    <h1>Launch desk</h1>
+    <p class="note">Health, today’s numbers and the status line. Refreshes every 30 seconds. Not linked from anywhere.</p>
+    <form id="login" hidden><input type="password" name="token" placeholder="ADMIN_TOKEN" autocomplete="off" required><button class="btn btn-primary">Open</button></form>
+    <div id="desk" hidden>
+      <div class="row" id="health"></div>
+      <h2 style="font-size:18px;margin-top:24px">Status line</h2>
+      <p class="note">Shows across the top of every page. Empty it to clear.</p>
+      <form id="status">
+        <input name="message" maxlength="200" placeholder="Sandbox slow, investigating.">
+        <select name="level"><option value="info">Info</option><option value="warn">Slow</option><option value="down">Down</option></select>
+        <button class="btn btn-primary">Set</button>
+        <button class="btn btn-ghost" type="button" id="clear">Clear</button>
+      </form>
+      <h2 style="font-size:18px;margin-top:28px">Today and the last two weeks</h2>
+      <div class="row" id="funnel"></div>
+      <div class="table-wrap"><table id="days"></table></div>
+    </div>
+  </main>
+  <script type="module">
+    const $ = (id) => document.getElementById(id);
+    const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const KEY = 'worksql.admin';
+    let token = '';
+    try { token = sessionStorage.getItem(KEY) || ''; } catch { /* fine */ }
+    const COLS = [['view_home', 'Home'], ['view_work', 'Work'], ['clock_in', 'Clock-ins'], ['ticket_closed', 'Closed'], ['ticket_held_back', 'Held back'],
+      ['mock_start', 'Mocks'], ['view_progress', 'Progress'], ['save_progress', 'Saved'], ['view_pricing', 'Pricing'], ['checkout_start', 'Checkouts'], ['paid', 'Paid'],
+      ['share_card', 'Shares'], ['export', 'Exports'], ['waitlist', 'Team list']];
+
+    async function load() {
+      const r = await fetch('/api/admin/stats', { headers: { 'x-admin-token': token } });
+      if (r.status === 403) { $('login').hidden = false; $('desk').hidden = true; return; }
+      const { days, health, waitlist } = await r.json();
+      $('login').hidden = true; $('desk').hidden = false;
+      const k = (label, value, ok) => `<div class="k ${ok === false ? 'bad' : ok ? 'good' : ''}"><span>${label}</span><b>${esc(value)}</b></div>`;
+      $('health').innerHTML = [
+        k('Sandbox', health.sandbox.ok ? `OK · ${health.sandbox.ms} ms` : 'DOWN', health.sandbox.ok),
+        k('Queries waiting', health.sandbox.waiting, health.sandbox.waiting < 20),
+        k('Payments', health.payments ? 'Live' : 'Off', health.payments),
+        k('Email', health.email ? 'Sending' : 'Outbox only', health.email),
+        k('Last backup', health.lastBackup || 'None yet', Boolean(health.lastBackup)),
+        k('Up for', `${health.uptimeMinutes} min`),
+        k('Team waitlist', waitlist),
+      ].join('');
+      const today = days[0] || {};
+      const pct = (a, b) => (b ? `${Math.round((a / b) * 100)}%` : '–');
+      $('funnel').innerHTML = [
+        k('Home views today', today.view_home || 0), k('Clock-ins', today.clock_in || 0),
+        k('Clock-in → closed a ticket', pct(today.ticket_closed ? Math.min(today.ticket_closed, today.clock_in || 0) : 0, today.clock_in)),
+        k('Checkouts started', today.checkout_start || 0), k('Paid', today.paid || 0), k('Saved progress', today.save_progress || 0),
+      ].join('');
+      $('days').innerHTML = `<tr><th>Day</th>${COLS.map(([, l]) => `<th>${l}</th>`).join('')}</tr>${days.map((d) =>
+        `<tr><td>${esc(d.day)}</td>${COLS.map(([c]) => `<td>${d[c] || ''}</td>`).join('')}</tr>`).join('')}`;
+      if (health.status) { $('status').message.value = health.status.message; $('status').level.value = health.status.level; }
+    }
+
+    async function setStatus(message, level) {
+      await fetch('/api/admin/status', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-token': token }, body: JSON.stringify({ message, level }) });
+      load();
+    }
+    $('login').addEventListener('submit', (e) => {
+      e.preventDefault();
+      token = e.target.token.value;
+      try { sessionStorage.setItem(KEY, token); } catch { /* fine */ }
+      load();
+    });
+    $('status').addEventListener('submit', (e) => { e.preventDefault(); setStatus(e.target.message.value, e.target.level.value); });
+    $('clear').addEventListener('click', () => { $('status').message.value = ''; setStatus('', 'info'); });
+    load();
+    setInterval(() => { if (!$('desk').hidden) load(); }, 30_000);
+  </script>
+</body>
+</html>

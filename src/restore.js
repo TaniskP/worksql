@@ -98,4 +98,34 @@ function confirm(token) {
   return members.isActive(member) ? member : null;
 }
 
-module.exports = { request, confirm, signLink, readLink, SENT, findPaid };
+// Free or paid: "email me a link so my progress follows me". Same rules as restore: the link, not the
+// typed address, is what signs the browser in, so typing someone else's email gets you nothing.
+const SAVE_SENT = 'Check your inbox. Open the link on any device and your progress comes with you. It works for 15 minutes.';
+
+async function requestSave({ typed, origin, ip }) {
+  if (!rate(`save-ip:${ip || 'unknown'}`, 8, 60 * 60 * 1000)) {
+    return { status: 429, body: { error: 'Too many links from this connection. Try again in a bit.' } };
+  }
+  const addr = String(typed || '').trim().toLowerCase();
+  if (!addr || addr.length > 254 || !EMAIL_RE.test(addr)) return { status: 400, body: { error: 'That doesn’t look like an email address.' } };
+  if (process.env.NODE_ENV === 'production' && (!email.configured() || !process.env.SITE_URL)) {
+    return { status: 503, body: { error: 'Saving by email isn’t available right now. Your progress is still kept in this browser.' } };
+  }
+  if (!rate(`save-email:${addr}`, 3, 60 * 60 * 1000)) {
+    return { status: 429, body: { error: 'That email has had a few links already. Check inbox and spam, or try again later.' } };
+  }
+  const link = `${origin}/signin?token=${encodeURIComponent(signLink(addr))}`;
+  await email.send({
+    to: addr,
+    subject: 'Your WorkSQL progress link',
+    html: `<p>Open this on any phone or laptop and your tickets, streak and time come with you. It expires in 15 minutes.</p>
+      <p><a href="${link}">Open my progress</a></p>
+      <p>Lost the link later? Ask for a new one from the Progress page. If you didn't ask for this, ignore it.</p>`,
+  });
+  return { status: 200, body: { ok: true, message: SAVE_SENT } };
+}
+
+// The email inside a valid, unexpired save link.
+const confirmSave = (token) => readLink(token);
+
+module.exports = { request, confirm, requestSave, confirmSave, signLink, readLink, SENT, SAVE_SENT, findPaid };

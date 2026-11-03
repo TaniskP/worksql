@@ -1,5 +1,5 @@
 import { attachEditor } from '/js/editor.js';
-import { icons, store, streakPill, esc, pingNudge, reviewerName, dialect, DIALECTS, stackPicker, quoteName, errorText } from '/js/common.js';
+import { icons, store, streakPill, esc, pingNudge, reviewerName, dialect, DIALECTS, stackPicker, quoteName, errorText, track } from '/js/common.js';
 
 const $ = (id) => document.getElementById(id);
 const id = Number(location.pathname.match(/\/lesson\/(\d+)/)?.[1] || 1);
@@ -158,7 +158,8 @@ function renderVerdict(v, { sqlError = false } = {}) {
         ${wall ? `<span class="wall-note">That’s Monday done. Tuesday’s inbox has 6 tickets waiting, and the week runs on from there: ${paidCount} tickets over ${paidDays} days, on the paid plan.</span>` : ''}
       </div>
       <span class="time">${fmtTime(secs)} on this one.</span>${nextButton()}</div>`;
-    store.complete(lesson.id, secs);
+    store.complete(lesson.id, secs, { sql: ta.value, dialect: stack });
+    track('ticket_closed');
     pingNudge();
     step = steps.length - 1;
     renderSteps();
@@ -211,6 +212,8 @@ async function run() {
     }
     const v = data.verdict;
     const n = data.rows.length;
+    // The real ticket's attempts go in the learning log; walkthrough steps are practice.
+    if (v && step === steps.length - 1) store.attempt(lesson.id, { pass: v.pass, headline: v.headline, detail: v.detail, sql: ta.value });
     $('rtab-results').textContent = `Results (${n}${data.truncated ? '+' : ''})`;
     $('results').innerHTML = data.columns.length
       ? gridHtml(data.columns, data.rows, { extra: new Set(v.extraRows) })
@@ -221,7 +224,7 @@ async function run() {
     showTab('results');
     renderVerdict(v);
   } catch {
-    $('status').textContent = 'Could not reach the sandbox. Is the server running?';
+    $('status').textContent = 'Lost the connection to the sandbox. Check your internet and press Run again.';
   } finally {
     running = false;
     $('run').disabled = false;

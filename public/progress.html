@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Your progress · WorkSQL</title>
+  <meta name="description" content="Your week at Harbour &amp; Co: tickets closed, streak, time practised and what the senior DBA said about each one.">
+  <meta name="robots" content="noindex">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body class="app">
+  <header class="site-header" style="border-bottom:1px solid var(--line);background:var(--card)">
+    <nav class="nav">
+      <a href="/" class="logo" data-logo>WorkSQL</a>
+      <div class="nav-links">
+        <a href="/lessons">Guided lessons</a>
+        <details class="nav-res">
+          <summary>Resources</summary>
+          <div class="nav-res-list">
+            <a href="/guides">Guides</a>
+            <a href="/tsql">T-SQL reference</a>
+            <a href="/tools">Free tools</a>
+            <a href="/convert">Convert</a>
+            <a href="/interview">Interview</a>
+          </div>
+        </details>
+        <a href="/pricing">Pricing</a>
+        <a href="/progress" aria-current="page">Progress</a>
+      </div>
+      <details class="nav-more">
+        <summary>Menu</summary>
+        <div class="nav-more-list">
+          <a href="/lessons">Guided lessons</a>
+          <a href="/progress">Progress</a>
+          <a href="/guides">Guides</a>
+          <a href="/tsql">T-SQL reference</a>
+          <a href="/tools">Free tools</a>
+          <a href="/interview">Interview</a>
+          <a href="/pricing">Pricing</a>
+        </div>
+      </details>
+      <div class="nav-actions"><a href="/work" class="btn btn-primary">Clock in</a></div>
+    </nav>
+  </header>
+
+  <main class="progress-page">
+    <div class="pg-flash" id="pg-flash" hidden></div>
+
+    <section class="pg-head">
+      <div>
+        <div class="pg-kicker" id="pg-kicker">Harbour &amp; Co</div>
+        <h1 id="pg-title">Your week</h1>
+        <p class="pg-sub" id="pg-sub"></p>
+      </div>
+      <div class="pg-continue" id="pg-continue"></div>
+    </section>
+
+    <section class="pg-tiles" id="pg-tiles" aria-label="Summary"></section>
+
+    <section class="pg-card">
+      <div class="pg-card-head"><h2>The week</h2><span class="pg-hint">Tickets closed each day</span></div>
+      <div class="pg-week" id="pg-week"></div>
+      <div class="pg-card-head" style="margin-top:22px"><h2>Practice</h2><span class="pg-hint" id="pg-heat-hint">Minutes a day, last 12 weeks</span></div>
+      <div class="pg-heat" id="pg-heat" role="img"></div>
+    </section>
+
+    <section class="pg-card">
+      <div class="pg-card-head">
+        <h2>Every ticket</h2>
+        <span class="pg-filters" id="pg-filters" role="group" aria-label="Show">
+          <button type="button" data-f="all" class="on">All</button><button type="button" data-f="closed">Closed</button><button type="button" data-f="open">Open</button>
+        </span>
+      </div>
+      <p class="pg-hint" style="margin:0 0 10px">Open a row for what the senior DBA said on each try, and the query that closed it.</p>
+      <div class="pg-table-wrap"><table class="pg-table" id="pg-table"></table></div>
+    </section>
+
+    <section class="pg-card" id="pg-mocks-card" hidden>
+      <div class="pg-card-head"><h2>Mock shifts</h2><a class="btn btn-ghost btn-sm" href="/work?mock=1">Take another</a></div>
+      <div id="pg-mocks"></div>
+    </section>
+
+    <div class="pg-grid">
+      <section class="pg-card" id="pg-share">
+        <div class="pg-card-head"><h2>Share card</h2><span class="pg-hint">For LinkedIn, or your team chat</span></div>
+        <canvas id="pg-canvas" width="1200" height="630" aria-label="Your WorkSQL share card"></canvas>
+        <div class="pg-actions">
+          <button class="btn btn-primary" id="pg-download">Download image</button>
+          <a class="btn btn-ghost" id="pg-linkedin" target="_blank" rel="noopener">Post on LinkedIn</a>
+          <button class="btn btn-ghost" id="pg-copy">Copy post text</button>
+        </div>
+        <p class="pg-hint" id="pg-copy-msg" hidden></p>
+      </section>
+
+      <section class="pg-card">
+        <div class="pg-card-head"><h2>Export</h2><span class="pg-hint">Proof of practice</span></div>
+        <p>Every closed ticket: what was asked, the query you sent, and the shape of the result.</p>
+        <div class="pg-actions">
+          <button class="btn btn-ghost" id="pg-md">Download Markdown</button>
+          <button class="btn btn-ghost" id="pg-pdf">Save as PDF</button>
+        </div>
+        <div class="pg-save" id="pg-save"></div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Printed for "Save as PDF": just the portfolio. -->
+  <section class="pg-print" id="pg-print" aria-hidden="true"></section>
+
+  <footer class="footer">
+    <div class="inner">
+      <span>WorkSQL · SQL at work, five minutes a day.</span>
+      <div class="links"><a href="/work">Workplace practice</a><a href="/lessons">Guided lessons</a><a href="/pricing">Pricing</a><a href="/support">Support</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></div>
+    </div>
+  </footer>
+  <script type="module" src="/js/back.js"></script>
+  <script type="module" src="/js/cookies.js"></script>
+  <script type="module" src="/js/progress.js"></script>
+</body>
+</html>

@@ -694,7 +694,7 @@ function publicLesson(l) {
 
 // Catalogue entry for locked lessons: enough to see what you are buying, not the answers.
 function listing(l) {
-  return { id: l.id, n: l.n, day: l.day, kind: l.kind, topic: l.topic, blurb: l.blurb, minutes: l.minutes, from: l.from.name, free: l.free };
+  return { id: l.id, n: l.n, day: l.day, kind: l.kind, topic: l.topic, blurb: l.blurb, minutes: l.minutes, from: l.from.name, role: l.from.role, title: l.title, free: l.free };
 }
 
 // The next ticket a learner would see, in schedule order, given what they've closed.

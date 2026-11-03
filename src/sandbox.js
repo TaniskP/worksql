@@ -20,7 +20,12 @@ function spawn() {
   });
 }
 
+// One worker runs one query at a time. Past this many waiting, say so rather than queue for ever.
+const MAX_WAITING = 40;
+const BUSY = { error: 'WorkSQL: the sandbox is busy right now. Wait a few seconds and run it again.', busy: true };
+
 function call(msg) {
+  if (pending.size >= MAX_WAITING) return Promise.resolve(BUSY);
   if (!worker) spawn();
   const id = ++seq;
   return new Promise((resolve) => {
@@ -40,4 +45,5 @@ module.exports = {
   counts: () => call({ op: 'counts' }),
   preview: (table, n = 3) => call({ op: 'preview', table, n }),
   today: () => call({ op: 'today' }),
+  waiting: () => pending.size,
 };

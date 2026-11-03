@@ -19,6 +19,14 @@ const { articles, renderArticle, renderIndex, renderGuides, pathOf, sitemapPaths
 const { tools, renderTools, renderTool, toolPaths } = require('./src/tools');
 const { matchHub, hubPaths } = require('./src/hubs');
 const { lookup } = require('./src/lookup');
+const guard = require('./src/guard');
+const status = require('./src/status');
+const backup = require('./src/backup');
+const analytics = require('./src/analytics');
+const progress = require('./src/progress');
+const waitlist = require('./src/waitlist');
+const email = require('./src/email');
+const crypto = require('node:crypto');
 
 const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC = path.join(__dirname, 'public');
@@ -29,8 +37,12 @@ const TYPES = {
 const TABLES = ['Orders', 'OrderLines', 'Products', 'Customers', 'Staff', 'Returns'];
 const PAGES = {
   '/': 'index.html', '/lessons': 'lessons.html', '/pricing': 'pricing.html', '/work': 'work.html',
-  '/support': 'support.html', '/privacy': 'privacy.html', '/terms': 'terms.html',
+  '/support': 'support.html', '/privacy': 'privacy.html', '/terms': 'terms.html', '/progress': 'progress.html',
 };
+// Page views we count (a number per day, nothing about who).
+const VIEWS = { '/': 'view_home', '/pricing': 'view_pricing', '/work': 'view_work', '/progress': 'view_progress', '/lessons': 'view_lessons' };
+const started = Date.now();
+const tooMany = (res) => send(res, 429, { error: 'Too many requests. Give it a few seconds and try again.' });
 
 function send(res, status, body) {
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
@@ -57,14 +69,15 @@ function readRaw(req) {
 
 const isHttps = (req) => (process.env.SITE_URL || '').startsWith('https://') || req.headers['x-forwarded-proto'] === 'https';
 
-function serveFile(res, file) {
+function serveFile(res, file, origin = `http://localhost:${PORT}`) {
   const full = path.join(PUBLIC, file);
   if (!full.startsWith(PUBLIC)) { res.writeHead(403); return res.end(); }
   fs.readFile(full, (err, buf) => {
-    if (err) { res.writeHead(404, { 'Content-Type': 'text/plain' }); return res.end('Not found'); }
+    if (err) return sendHtml(res, 404, errorPage(404));
     // no-cache: browsers may keep a copy but must check it's current, so a deploy shows up on the next load.
     res.writeHead(200, { 'Content-Type': TYPES[path.extname(full)] || 'application/octet-stream', 'Cache-Control': 'no-cache' });
-    res.end(buf);
+    // Share tags need absolute links: %ORIGIN% in a page becomes the public address.
+    res.end(path.extname(full) === '.html' ? buf.toString('utf8').replaceAll('%ORIGIN%', origin) : buf);
   });
 }
 
@@ -100,6 +113,7 @@ async function api(req, res, url) {
   }
 
   if (req.method === 'POST' && p === '/api/run') {
+    if (!guard.allow(req, 'run')) return tooMany(res);
     const { lessonId, step, sql, dialect } = await readJson(req);
     const lesson = lessons.find((l) => l.id === +lessonId);
     if (!lesson) return send(res, 404, { error: 'No such lesson.' });
@@ -120,6 +134,7 @@ async function api(req, res, url) {
   }
 
   if (req.method === 'POST' && p === '/api/query') {
+    if (!guard.allow(req, 'query')) return send(res, 429, { error: 'WorkSQL: that’s a lot of runs in a minute. Give it a few seconds and press Execute again.' });
     const { sql, dialect } = await readJson(req);
     const started = Date.now();
     const r = await sandbox.run(String(sql || ''), dialectOf(dialect));
@@ -127,13 +142,14 @@ async function api(req, res, url) {
   }
 
   if (req.method === 'POST' && p === '/api/parse') {
+    if (!guard.allow(req, 'query')) return send(res, 429, { error: 'WorkSQL: that’s a lot of runs in a minute. Give it a few seconds and try again.' });
     const { sql, dialect } = await readJson(req);
     return send(res, 200, await sandbox.parse(String(sql || ''), dialectOf(dialect)));
   }
 
   if (req.method === 'GET' && p === '/api/plans') {
     const visible = plans.filter((x) => !x.hidden).map(({ providerPriceId, ...rest }) => rest);
-    return send(res, 200, { plans: visible, paymentsLive: payments.live() });
+    return send(res, 200, { plans: visible, paymentsLive: payments.live(), launch: launchOffer() });
   }
 
   // ---------- payments and the login cookie ----------
@@ -146,7 +162,9 @@ async function api(req, res, url) {
   }
 
   if (req.method === 'POST' && p === '/api/checkout') {
+    if (!guard.allow(req, 'checkout')) return tooMany(res);
     const { plan } = await readJson(req);
+    analytics.count('checkout_start');
     const out = await payments.createCheckout({ planId: plan, origin: originOf(req), email: session.whoIs(req).email });
     return send(res, out.status, out.body);
   }
@@ -167,10 +185,53 @@ async function api(req, res, url) {
   }
 
   if (req.method === 'POST' && p === '/api/restore') {
+    if (!guard.allow(req, 'email')) return tooMany(res);
     const { email: typed } = await readJson(req);
-    const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket.remoteAddress;
-    const out = await restore.request({ typed, origin: originOf(req), ip });
+    const out = await restore.request({ typed, origin: originOf(req), ip: guard.ipOf(req) });
     return send(res, out.status, out.body);
+  }
+
+  // ---------- progress that follows the person ----------
+  // Free learners: an emailed link signs this browser in (no password), then progress syncs like a paid member's.
+  if (req.method === 'POST' && p === '/api/save') {
+    if (!guard.allow(req, 'email')) return tooMany(res);
+    const { email: typed } = await readJson(req);
+    const out = await restore.requestSave({ typed, origin: originOf(req), ip: guard.ipOf(req) });
+    if (out.status === 200) analytics.count('save_progress');
+    return send(res, out.status, out.body);
+  }
+
+  if (p === '/api/progress' && (req.method === 'GET' || req.method === 'POST')) {
+    const who = session.whoIs(req);
+    if (!who.email) return send(res, 401, { error: 'not_signed_in' });
+    if (req.method === 'GET') return send(res, 200, { email: who.email, progress: progress.get(who.email) });
+    if (!guard.allow(req, 'write')) return tooMany(res);
+    return send(res, 200, { email: who.email, progress: progress.sync(who.email, (await readJson(req)).progress) });
+  }
+
+  if (req.method === 'POST' && p === '/api/event') {
+    if (!guard.allow(req, 'write')) return send(res, 200, { ok: false });
+    const { name } = await readJson(req);
+    analytics.count(String(name || ''));
+    return send(res, 200, { ok: true });
+  }
+
+  if (req.method === 'POST' && p === '/api/waitlist') {
+    if (!guard.allow(req, 'write')) return tooMany(res);
+    const out = waitlist.join(await readJson(req));
+    if (out.ok) analytics.count('waitlist');
+    return send(res, out.error ? 400 : 200, out);
+  }
+
+  if (req.method === 'GET' && p === '/api/status') return send(res, 200, { status: status.get(), support: supportEmail() });
+
+  // ---------- launch-day admin: ADMIN_TOKEN in the x-admin-token header ----------
+  if (p.startsWith('/api/admin/')) {
+    if (!adminOk(req)) return send(res, 403, { error: 'Not available.' });
+    if (req.method === 'GET' && p === '/api/admin/stats') {
+      return send(res, 200, { days: analytics.report(14), health: await health(), waitlist: waitlist.size() });
+    }
+    if (req.method === 'POST' && p === '/api/admin/status') return send(res, 200, { status: status.set(await readJson(req)) });
   }
 
   // Local development: flip this browser between paid and free without going through Stripe.
@@ -198,6 +259,7 @@ async function api(req, res, url) {
   }
 
   if (req.method === 'POST' && p === '/api/nudge') {
+    if (!guard.allow(req, 'email')) return tooMany(res);
     const out = nudges.subscribe(await readJson(req));
     return send(res, out.error ? 400 : 200, out);
   }
@@ -211,6 +273,48 @@ async function api(req, res, url) {
 
 // The public address, for canonical links and email links. Set SITE_URL in production.
 const originOf = (req) => process.env.SITE_URL || `http://${req.headers.host || `localhost:${PORT}`}`;
+
+const supportEmail = () => process.env.SUPPORT_EMAIL || '';
+
+// A launch code for the pricing page, e.g. LAUNCH_CODE=PRODUCTHUNT LAUNCH_OFFER="20% off your first month".
+// The code itself is made in Stripe (Product catalogue > Coupons > Promotion codes); Checkout already accepts codes.
+function launchOffer() {
+  const code = process.env.LAUNCH_CODE;
+  if (!code) return null;
+  return { code, offer: process.env.LAUNCH_OFFER || 'a launch discount', ends: process.env.LAUNCH_ENDS || null };
+}
+
+function adminOk(req) {
+  const want = process.env.ADMIN_TOKEN;
+  const got = String(req.headers['x-admin-token'] || '');
+  return Boolean(want && got.length === want.length && crypto.timingSafeEqual(Buffer.from(got), Buffer.from(want)));
+}
+
+// What /health reports: is the sandbox answering, and is everything launch day needs switched on?
+async function health() {
+  const t = Date.now();
+  const r = await Promise.race([sandbox.run('SELECT 1 AS ok', 'tsql'), new Promise((ok) => setTimeout(() => ok({ error: 'no answer in 2s' }), 2000))]);
+  const sandboxOk = !r.error;
+  return {
+    ok: sandboxOk,
+    uptimeMinutes: Math.round((Date.now() - started) / 60000),
+    sandbox: { ok: sandboxOk, ms: Date.now() - t, waiting: sandbox.waiting(), error: r.error || undefined },
+    payments: payments.live(),
+    email: email.configured(),
+    lastBackup: backup.latest(),
+    status: status.get(),
+  };
+}
+
+// The same look as the site, for a page that doesn't exist or a crash.
+function errorPage(code) {
+  const lost = code === 404;
+  return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${lost ? 'Not found' : 'Something broke'} · WorkSQL</title><link rel="stylesheet" href="/css/app.css">
+  <main class="article" style="text-align:center;padding-top:72px"><h1>${lost ? 'That page isn’t here.' : 'That one’s on us.'}</h1>
+  <p>${lost ? 'The link may be old. Your progress is safe.' : 'Something went wrong on the server. Your progress is safe in your browser. Try again in a moment.'}</p>
+  <p><a class="btn btn-primary" href="/work">Back to the inbox</a> <a class="btn btn-ghost" href="/">Home</a> <a class="btn btn-ghost" href="/support">Support</a></p></main></html>`;
+}
 
 function sendHtml(res, status, html) {
   res.writeHead(status, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' });
@@ -279,6 +383,7 @@ async function welcome(req, res, url) {
   let member = null;
   try { member = await payments.completeCheckout(url.searchParams.get('session_id')); } catch (e) { console.error('[welcome]', e.message); }
   if (member) {
+    analytics.count('paid');
     res.writeHead(303, { Location: '/lessons?welcome=1', 'Set-Cookie': session.setCookieHeader(member.email, { secure: isHttps(req) }) });
     return res.end();
   }
@@ -286,6 +391,19 @@ async function welcome(req, res, url) {
     <link rel="stylesheet" href="/css/app.css"><main class="article"><h1>We couldn't confirm that payment yet.</h1>
     <p>If you've just paid, give it a few seconds and try again. If you didn't finish checking out, nothing was charged.</p>
     <p><a class="btn btn-primary" href="/welcome?session_id=${encodeURIComponent(url.searchParams.get('session_id') || '')}">Try again</a> <a class="btn btn-ghost" href="/pricing">Back to pricing</a></p></main>`);
+}
+
+// "Email me my progress" link: signs this browser in as that email (free or paid), then shows their progress.
+function signIn(req, res, url) {
+  const addr = restore.confirmSave(url.searchParams.get('token'));
+  if (addr) {
+    res.writeHead(303, { Location: '/progress?saved=1', 'Set-Cookie': session.setCookieHeader(addr, { secure: isHttps(req) }) });
+    return res.end();
+  }
+  return sendHtml(res, 200, `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Sign in · WorkSQL</title>
+    <link rel="stylesheet" href="/css/app.css"><main class="article"><h1>That link has expired.</h1>
+    <p>Links last 15 minutes. Ask for a new one from your Progress page.</p>
+    <p><a class="btn btn-primary" href="/progress">Progress</a></p></main>`);
 }
 
 // Already-paid link from email. The form never sets the cookie; this click does.
@@ -304,16 +422,21 @@ async function restoreAccess(req, res, url) {
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   try {
+    if (url.pathname === '/health') { const h = await health(); return send(res, h.ok ? 200 : 503, h); }
     if (url.pathname.startsWith('/api/')) return await api(req, res, url);
+    if (url.pathname === '/signin') return signIn(req, res, url);
+    if (url.pathname === '/admin') return serveFile(res, 'admin.html');
     if (url.pathname === '/welcome') return await welcome(req, res, url);
     if (url.pathname === '/restore') return await restoreAccess(req, res, url);
     if (seoRoutes(req, res, url)) return;
-    if (PAGES[url.pathname]) return serveFile(res, PAGES[url.pathname]);
+    if (PAGES[url.pathname]) { if (VIEWS[url.pathname]) analytics.count(VIEWS[url.pathname]); return serveFile(res, PAGES[url.pathname], originOf(req)); }
     if (/^\/lesson\/\d+\/?$/.test(url.pathname)) return serveFile(res, 'lesson.html');
     return serveFile(res, decodeURIComponent(url.pathname).replace(/^\/+/, ''));
   } catch (e) {
     console.error(e);
-    send(res, 500, { error: 'Something went wrong.' });
+    if (res.headersSent) return res.end();
+    if (url.pathname.startsWith('/api/')) return send(res, 500, { error: 'WorkSQL: something went wrong on our side. Try that again in a moment.' });
+    return sendHtml(res, 500, errorPage(500));
   }
 });
 
@@ -323,3 +446,5 @@ server.listen(PORT, () => console.log(`WorkSQL running at http://localhost:${POR
 const sweep = () => nudges.sweep(process.env.SITE_URL || `http://localhost:${PORT}`).catch((e) => console.error('[nudges]', e));
 setTimeout(sweep, 10_000);
 setInterval(sweep, 15 * 60 * 1000);
+
+backup.schedule();

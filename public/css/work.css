@@ -313,3 +313,40 @@ body.work button { font-family: var(--ui); }
 .tb-stack .stack-opts button.on { background: #cce4f7; color: #1e1e1e; box-shadow: inset 0 0 0 1px #7eb4ea; }
 .ci-stack { margin: 0 0 16px; }
 .ci-stack .stack-label { display: block; width: 100%; }
+
+/* ---------- first clock-in ---------- */
+.clockin-card[hidden] { display: none; }
+.ob-step { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.ob-skip { border: 0; background: none; color: var(--muted); font-size: 13px; }
+.ob-input { width: 100%; height: 44px; border: 1px solid var(--line); border-radius: 8px; padding: 0 12px; font: inherit; font-size: 15px; margin-bottom: 14px; }
+.onboard .ci-stack { margin-bottom: 18px; }
+.ob-sample { display: grid; gap: 8px; margin-bottom: 18px; font-size: 13.5px; animation: obIn .4s ease both; }
+.ob-mail { background: var(--bg); border-left: 3px solid #c2410c; border-radius: 6px; padding: 10px 12px; color: var(--ink-2); }
+.ob-arrow { color: var(--muted); font-size: 12.5px; }
+.ob-sql { margin: 0; background: #0b1733; color: #e6ecff; border-radius: 8px; padding: 10px 12px; font-family: var(--mono); font-size: 12px; line-height: 1.5; white-space: pre-wrap; }
+.ob-note { background: var(--blue-50); border-radius: 8px; padding: 8px 12px; color: var(--ink-2); }
+@keyframes obIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.ci-mock { width: 100%; margin-top: 8px; font-size: 13.5px; }
+
+/* ---------- the paywall sells the week ---------- */
+.locked-card.sell { border: 1px solid var(--line); border-top: 3px solid var(--blue); }
+.sell-kicker { font-size: 11.5px; font-weight: 700; color: var(--blue); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 4px; }
+.sell-inbox { list-style: none; margin: 10px 0; padding: 0; display: grid; gap: 6px; max-height: 210px; overflow-y: auto; }
+.sell-inbox li { display: flex; gap: 8px; align-items: center; font-size: 12.5px; color: #444; }
+.sell-inbox .av { flex: none; width: 24px; height: 24px; border-radius: 50%; color: #fff; display: grid; place-items: center; font-size: 10px; font-weight: 700; }
+.sell-inbox b { color: var(--ink); font-weight: 600; margin-right: 4px; }
+.sell-week { margin: 0 0 10px; color: #555; }
+.sell-price { font-size: 13px; margin-bottom: 10px; }
+.sell-price b { font-size: 16px; }
+.sell-code { font-size: 12.5px; background: var(--amber-50); border-radius: 6px; padding: 6px 8px; margin-bottom: 10px; }
+.sell-more { display: block; text-align: center; font-size: 12.5px; color: var(--blue); margin-top: 8px; }
+
+/* ---------- mock shift ---------- */
+.desk.mock .titlebar { background: linear-gradient(90deg, #fff4dc, #fff); }
+.titlebar .clock.low { color: var(--red); }
+.co-mock { margin-bottom: 8px; overflow-x: auto; }
+.mock-table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-bottom: 8px; }
+.mock-table th { text-align: left; color: var(--muted); font-weight: 600; padding: 4px 6px; border-bottom: 1px solid var(--line); }
+.mock-table td { padding: 6px; border-bottom: 1px solid var(--line-2); }
+.co-nudge:empty { display: none; }
+.clockout-card { max-height: calc(100vh - 40px); overflow-y: auto; }

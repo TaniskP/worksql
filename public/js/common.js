@@ -18,8 +18,11 @@ export const icons = {
   box: '<svg viewBox="0 0 32 32"><rect x="4" y="9" width="24" height="18" rx="2.5" fill="#f5b53d"/><path d="M4 13h24" stroke="#e09a1c" stroke-width="2"/><rect x="11" y="5" width="10" height="6" rx="1.5" fill="none" stroke="#e09a1c" stroke-width="2.4"/><rect x="13.5" y="11.5" width="5" height="3" rx="1" fill="#fff"/></svg>',
 };
 
-// ---------- local store (no accounts yet: progress lives in this browser) ----------
+// ---------- local store ----------
+// Progress lives in this browser first. Once the browser is signed in (paid at Stripe, or "email me my
+// progress"), every change is merged into the server's copy too, so it follows them to the next device.
 const KEY = 'worksql.v1';
+const MAX_LOG = 30;
 
 function load() {
   try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; }
@@ -34,23 +37,68 @@ export const localDate = (d = new Date()) =>
 export const store = {
   get() {
     const s = load();
-    return { completed: s.completed || {}, days: s.days || [], minutes: s.minutes || {}, plan: s.plan || 'free', drafts: s.drafts || {}, name: s.name || '' };
+    return {
+      ...s, completed: s.completed || {}, days: s.days || [], minutes: s.minutes || {}, plan: s.plan || 'free', drafts: s.drafts || {}, name: s.name || '',
+      log: s.log || {}, mocks: s.mocks || [], onboarded: Boolean(s.onboarded),
+    };
   },
-  setName(name) { const s = this.get(); s.name = name; save(s); },
+  setName(name) { const s = this.get(); s.name = String(name || '').trim().slice(0, 40); save(s); queueSync(); },
   nudgeToken() { return load().nudge || null; },
   setNudgeToken(token) { const s = load(); s.nudge = token; save(s); },
-  complete(id, seconds) {
+  setOnboarded() { const s = this.get(); s.onboarded = true; save(s); queueSync(); },
+  // extra: { sql, dialect } of the query that closed it. Attempts come from the log of tries before it.
+  complete(id, seconds, extra = {}) {
     const s = this.get();
-    if (!s.completed[id]) s.completed[id] = { at: Date.now(), seconds };
+    if (!s.completed[id]) {
+      const attempts = (s.log[id] || []).filter((e) => !e.pass).length + 1;
+      s.completed[id] = {
+        at: Date.now(), seconds, attempts,
+        ...(extra.sql ? { sql: String(extra.sql).slice(0, 4000) } : {}),
+        ...(extra.dialect ? { dialect: extra.dialect } : {}),
+        // The result's shape, for the portfolio export: column names and how many rows.
+        ...(Array.isArray(extra.columns) ? { columns: extra.columns.slice(0, 30).map((c) => String(c).slice(0, 60)), rows: Number(extra.rows) || 0 } : {}),
+      };
+    }
     const today = localDate();
     if (!s.days.includes(today)) s.days.push(today);
     save(s);
+    queueSync(0);
+  },
+  // Every marked attempt, right or wrong, with the reviewer's note: the learning log.
+  attempt(id, { pass, headline = '', detail = '', sql = '' }) {
+    const s = this.get();
+    const list = s.log[id] || [];
+    list.push({ at: Date.now(), pass: Boolean(pass), headline: String(headline).slice(0, 300), detail: String(detail).slice(0, 600), dialect: dialect(), sql: String(sql).slice(0, 2000) });
+    s.log[id] = list.slice(-MAX_LOG);
+    save(s);
+    queueSync();
+  },
+  addMock(result) {
+    const s = this.get();
+    s.mocks = [...s.mocks, result].slice(-20);
+    save(s);
+    queueSync(0);
   },
   addSeconds(sec) {
     const s = this.get();
     const today = localDate();
     s.minutes[today] = (s.minutes[today] || 0) + sec / 60;
     save(s);
+    queueSync();
+  },
+  // Put the merged copy from the server into this browser, keeping what only lives here (drafts, nudge token).
+  adopt(server) {
+    if (!server) return;
+    const s = load();
+    for (const k of ['completed', 'days', 'minutes', 'log', 'mocks']) if (server[k]) s[k] = server[k];
+    if (server.name) s.name = server.name;
+    if (server.onboarded) s.onboarded = true;
+    save(s);
+  },
+  // What goes to the server: everything except drafts and the nudge token.
+  forServer() {
+    const { completed, days, minutes, log, mocks, name, onboarded } = this.get();
+    return { completed, days, minutes, log, mocks, name, onboarded };
   },
   // Drafts are kept per stack, so switching never mixes a PostgreSQL query into the SQL Server one.
   draft(id) { return this.get().drafts[draftKey(id)]; },
@@ -155,6 +203,59 @@ export function stackPicker(el, { onChange, label = 'Your stack' } = {}) {
 // One call per page. The cookie that answers it is HttpOnly, so only the server can read it.
 export const me = await fetch('/api/me').then((r) => r.json()).catch(() => ({ paid: false }));
 
+// ---------- progress sync (signed-in browsers only) ----------
+let syncTimer = null;
+let syncing = null;
+export function syncProgress() {
+  if (!me.email) return Promise.resolve(null);
+  clearTimeout(syncTimer);
+  syncing = fetch('/api/progress', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ progress: store.forServer() }),
+  }).then((r) => (r.ok ? r.json() : null)).then((d) => { if (d && d.progress) store.adopt(d.progress); return d; }).catch(() => null);
+  return syncing;
+}
+// Small changes (a minute on the clock) wait a few seconds and go together; a closed ticket goes now.
+function queueSync(delay = 8000) {
+  if (!me.email) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(syncProgress, delay);
+}
+// Leaving the page: send what's pending so a closed laptop doesn't lose the last few minutes.
+addEventListener('pagehide', () => {
+  if (!me.email || !syncTimer) return;
+  clearTimeout(syncTimer);
+  try { navigator.sendBeacon('/api/progress', new Blob([JSON.stringify({ progress: store.forServer() })], { type: 'application/json' })); } catch { /* fine */ }
+});
+// Every page load on a signed-in browser pulls in what the other devices did.
+export const synced = syncProgress();
+
+// ---------- launch-day counts ----------
+// A name and nothing else: no ids, no cookies. See /privacy.
+export function track(name) {
+  try { navigator.sendBeacon('/api/event', new Blob([JSON.stringify({ name })], { type: 'application/json' })); } catch { /* fine */ }
+}
+
+// ---------- "Progress" in the header, once there's something to show ----------
+if ((store.completedIds().length || Object.keys(store.get().log).length || me.email) && !location.pathname.startsWith('/progress')) {
+  for (const list of document.querySelectorAll('.nav-links, .nav-more-list')) {
+    if (list.querySelector('a[href="/progress"]')) continue;
+    const pricing = list.querySelector('a[href="/pricing"]');
+    const a = Object.assign(document.createElement('a'), { href: '/progress', textContent: 'Progress' });
+    if (pricing) pricing.before(a); else list.append(a);
+  }
+}
+
+// ---------- status banner ----------
+// One line across the top of every page while something is wrong ("Sandbox slow, investigating.").
+fetch('/api/status').then((r) => r.json()).then(({ status }) => {
+  if (!status || !status.message) return;
+  const bar = document.createElement('div');
+  bar.className = `status-bar ${status.level || 'info'}`;
+  bar.setAttribute('role', 'status');
+  bar.innerHTML = `<span>${esc(status.message)}</span> <a href="/support">Support</a>`;
+  document.body.prepend(bar);
+}).catch(() => {});
+
 // ---------- helpers ----------
 export function esc(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -176,7 +277,7 @@ export async function getPlans() {
 // ---------- checkout ----------
 // Pay buttons only appear once payments are live (see src/payments.js). Until then the
 // pricing page shows the plans and what they include, with no button that leads nowhere.
-async function startCheckout(planId, button) {
+export async function startCheckout(planId, button) {
   button.disabled = true;
   try {
     const r = await fetch('/api/checkout', {
@@ -255,8 +356,50 @@ export function restoreForm(el) {
   });
 }
 
+// "Email me my progress": a magic link that signs this browser (and any other) in, so progress follows them.
+export function saveProgressForm(el, { title = 'Keep your progress', blurb = 'Switching laptop, or clearing cookies? Get a link by email. Open it on any device and your tickets come with you. No password.' } = {}) {
+  if (!el) return;
+  if (me.email) {
+    el.innerHTML = `<h3>${esc(title)}</h3><p class="muted-note" style="margin:0">Saved to <b>${esc(me.email)}</b>. On another device, ask for a link with the same email and it picks up here.</p>`;
+    return;
+  }
+  el.innerHTML = `<h3>${esc(title)}</h3><p style="margin-bottom:10px">${esc(blurb)}</p>
+    <form class="nudge-form"><input type="email" required placeholder="you@work.com" aria-label="Email address">
+    <button class="btn btn-primary" type="submit">Email me a link</button></form>
+    <label class="save-nudge"><input type="checkbox" checked> Also email me once if a ticket’s waiting and I’ve gone quiet</label>
+    <p class="nudge-msg muted-note" hidden></p>`;
+  el.querySelector('form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = el.querySelector('button');
+    const msg = el.querySelector('.nudge-msg');
+    const address = el.querySelector('input[type=email]').value;
+    btn.disabled = true;
+    msg.hidden = false;
+    msg.textContent = 'Sending…';
+    try {
+      const r = await fetch('/api/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: address }) });
+      const data = await r.json();
+      msg.textContent = data.message || data.error || 'Check your inbox.';
+      if (r.ok && el.querySelector('.save-nudge input').checked && !store.nudgeToken()) {
+        const n = await fetch('/api/nudge', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: address, completed: store.completedIds(), name: store.get().name }),
+        }).then((x) => x.json()).catch(() => ({}));
+        if (n.token) store.setNudgeToken(n.token);
+      }
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+
 export function accountCard(el, { freeHtml }) {
   if (!el) return;
+  if (!me.paid && me.email) {
+    el.innerHTML = `${freeHtml}<p class="muted-note" style="margin-top:12px">Progress saved to <b>${esc(me.email)}</b>. <button class="btn-text" data-signout>Sign out</button></p>`;
+    el.querySelector('[data-signout]').addEventListener('click', async () => { await fetch('/api/signout', { method: 'POST' }); location.reload(); });
+    return;
+  }
   if (!me.paid) { el.innerHTML = freeHtml; return; }
   el.innerHTML = `<h3>Paid plan</h3><p style="margin-bottom:12px">Signed in as <b>${esc(me.email)}</b> on this browser. Every day is unlocked.</p>
     ${me.canManage ? '<button class="btn btn-ghost" style="width:100%" data-portal>Manage subscription</button>' : ''}

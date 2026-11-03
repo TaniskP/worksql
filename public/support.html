@@ -45,8 +45,17 @@
   <main class="article legal">
     <h1>Support</h1>
     <p class="lede">Two ways in: workplace practice in the inbox, or guided lessons one ticket at a time. Both use the same Harbour &amp; Co tickets.</p>
+    <div class="support-status" id="support-status"><span class="dot ok"></span> <span id="support-status-text">All systems normal.</span></div>
+    <div class="support-contact" id="support-contact">
+      <h2 style="margin-top:0">Talk to a person</h2>
+      <p id="support-mail">Email us and a real person replies, usually within a few hours on weekdays.</p>
+    </div>
     <h2>I paid, but this browser is locked</h2>
     <p>Clearing cookies signs you out. Use <a href="/pricing#already-paid">Already paid</a> on the pricing page with the email from checkout. We’ll send a 15-minute restore link. Don’t buy again.</p>
+    <h2>My progress disappeared</h2>
+    <p>Progress is kept in the browser you practised in. If you saved it by email, open <a href="/progress">Progress</a> on the new device, ask for a link with the same email, and everything comes back. Paid members get this automatically: restoring access also brings back progress.</p>
+    <h2>Something isn’t working</h2>
+    <p>If a query hangs or the sandbox says it restarted, press Execute again. It recovers on its own within a few seconds. If it keeps happening, email us with the ticket name and your stack (SQL Server, PostgreSQL or MySQL).</p>
     <h2>Where do I start?</h2>
     <p><a href="/work">Workplace practice</a> opens the inbox. <a href="/lessons">Guided lessons</a> lets you pick a lesson and learn step by step. The first 10 tickets are free. No sign-up.</p>
     <h2>Plans and billing</h2>
@@ -62,8 +71,16 @@
   <script type="module" src="/js/back.js"></script>
   <script type="module" src="/js/cookies.js"></script>
   <script type="module">
-    import { icons } from '/js/common.js';
+    import { icons, esc } from '/js/common.js';
     document.querySelector('[data-logo]').insertAdjacentHTML('afterbegin', icons.logo);
+    const { status, support } = await fetch('/api/status').then((r) => r.json()).catch(() => ({}));
+    if (status && status.message) {
+      document.querySelector('#support-status .dot').className = `dot ${status.level === 'down' ? 'down' : 'warn'}`;
+      document.getElementById('support-status-text').textContent = status.message;
+    }
+    if (support) {
+      document.getElementById('support-mail').innerHTML = `Email <a href="mailto:${esc(support)}">${esc(support)}</a> and a real person replies, usually within a few hours on weekdays. Paid and stuck? Include the email you paid with.`;
+    }
   </script>
 </body>
 </html>

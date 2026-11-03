@@ -645,7 +645,9 @@ function page({ title, description, body, canonical, shell }) {
   <meta property="og:title" content="${esc(title)}">
   <meta property="og:description" content="${esc(description)}">
   <meta property="og:url" content="${esc(canonical)}">
-  <meta property="og:type" content="article">` : ''}
+  <meta property="og:type" content="article">
+  <meta property="og:image" content="${esc(new URL('/img/og.png', canonical).href)}">
+  <meta name="twitter:card" content="summary_large_image">` : ''}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
   <link rel="stylesheet" href="/css/app.css">

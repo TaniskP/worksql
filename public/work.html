@@ -4,6 +4,17 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Work mode · Harbour &amp; Co</title>
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="WorkSQL">
+  <meta property="og:title" content="Work mode · Harbour &amp; Co">
+  <meta property="og:description" content="Clock in at Harbour & Co. Tickets land in your inbox; write the query, run it, send the results.">
+  <meta property="og:url" content="%ORIGIN%/work">
+  <meta property="og:image" content="%ORIGIN%/img/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="An email from Harvey asking for last week’s orders, the SQL that answers it, and a green Sent to Harvey tick.">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="canonical" href="%ORIGIN%/work">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
   <link rel="stylesheet" href="/css/app.css">
@@ -20,6 +31,7 @@
       <p class="ci-note">Your inbox is waiting. Tickets come in one at a time from people around the office. Write the query, run it, send them the results.</p>
       <a href="/" class="ci-back" data-back>← Back to WorkSQL</a>
     </div>
+    <div class="clockin-card onboard" id="ci-onboard" hidden></div>
     <form class="clockin-card" id="ci-form">
       <h1 id="ci-title">Monday, 09:00</h1>
       <p class="ci-lede" id="ci-lede">You’ve got 1 new message.</p>
@@ -29,7 +41,8 @@
       </div>
       <div class="ci-stack" data-stack-picker="clockin"></div>
       <button class="btn btn-primary btn-lg" type="submit" style="width:100%">Clock in</button>
-      <p class="ci-small">Free. No sign-up. Progress stays in this browser.</p>
+      <button class="btn btn-ghost ci-mock" type="button" id="ci-mock">Interview tomorrow? Take a timed mock shift</button>
+      <p class="ci-small" id="ci-small">Free. No sign-up. Progress stays in this browser until you save it. <a href="/progress">Your progress</a></p>
     </form>
   </section>
 
@@ -107,13 +120,15 @@
   <!-- ===== Clock out ===== -->
   <section class="clockout" id="clockout" hidden>
     <div class="clockout-card">
-      <h1>Shift over.</h1>
+      <h1 id="co-title">Shift over.</h1>
       <div class="co-stats" id="co-stats"></div>
       <p id="co-note"></p>
+      <div class="co-mock" id="co-mock" hidden></div>
+      <div class="co-nudge co-save" id="co-save"></div>
       <div class="co-nudge" id="co-nudge"></div>
       <div class="co-actions">
         <button class="btn btn-ghost" id="co-again">Clock back in</button>
-        <a class="btn btn-primary" href="/lessons">Back to WorkSQL</a>
+        <a class="btn btn-primary" href="/progress">See your progress</a>
       </div>
     </div>
   </section>
