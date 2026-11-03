@@ -65,7 +65,7 @@ Other options:
 - Real SQL tickets from colleagues, marked by a senior DBA
 - A ticket lands. You write the query.
 
-**Dad test:** "It's like a flight simulator for the SQL part of an office job. A colleague emails a question, you write the query, a senior DBA checks it before it goes."
+**In one breath:** "It's like a flight simulator for the SQL part of an office job. A colleague emails a question, you write the query, a senior DBA checks it before it goes."
 
 **Description (260 characters max):**
 Practise SQL the way work asks for it. Colleagues email requests ("last week's orders over £50, newest first"). You write the query in SQL Server, PostgreSQL or MySQL, and a senior DBA marks it strictly before it's sent. 10 tickets free, no sign-up.
@@ -80,7 +80,9 @@ Practise SQL the way work asks for it. Colleagues email requests ("last week's o
 >
 > **Why it isn't LeetCode:** puzzle sites ask "find the second highest salary". Work asks "can you get me last week's orders over £50 for the 10am, and don't include today". The hard part is the date range, the column names someone expects, and the ORDER BY they forgot to mention. That's what this marks.
 >
-> **How it works:** you clock in at Harbour & Co, a fake company with messy, realistic tables. Tickets land in your inbox from Harvey in Sales, Amy in Finance and Tom in the warehouse. You write the query in a studio that feels like SSMS. A senior DBA (my dad, who has done this for a living for decades) wrote the marking notes: `SELECT *` gets held back, and so do extra columns or today's orders slipping into "last week".
+> **How it works:** you clock in at Harbour & Co, a fake company with messy, realistic tables. Tickets land in your inbox from Harvey in Sales, Amy in Finance and Tom in the warehouse. You write the query in a studio that feels like SSMS, and a senior DBA checks it before it goes out: `SELECT *` gets held back, and so do extra columns or today's orders slipping into "last week".
+>
+> If you've worked with data, you've had this message at 9:14 on a Monday: *"Quick one: can you pull last week's numbers for the 10am? Not today's, they're not final yet."* WorkSQL is practice for exactly that.
 >
 > **Stacks:** SQL Server, PostgreSQL or MySQL. Same tickets; the functions, quoting, errors and marking follow your stack.
 >
