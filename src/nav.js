@@ -10,6 +10,7 @@ const resources = [
   ['/tools', 'Free tools'],
   ['/convert', 'Convert'],
   ['/interview', 'Interview'],
+  ['/careers', 'Data careers'],
 ];
 
 const footerItems = [
@@ -35,6 +36,7 @@ function activeOf(canonical) {
   try { p = new URL(canonical).pathname; } catch { /* path already */ }
   if (p.startsWith('/excel-to-sql') || p.startsWith('/pandas-to-sql') || p.startsWith('/sql-translator') || p === '/convert') return '/convert';
   if (p.startsWith('/interview')) return '/interview';
+  if (p.startsWith('/careers')) return '/careers';
   if (p.startsWith('/tools')) return '/tools';
   if (p.startsWith('/guides')) return '/guides';
   if (p.startsWith('/tsql')) return '/tsql';

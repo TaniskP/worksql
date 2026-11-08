@@ -19,6 +19,7 @@ const { articles, renderArticle, renderIndex, renderGuides, pathOf, sitemapPaths
 const { tools, renderTools, renderTool, toolPaths } = require('./src/tools');
 const { matchHub, hubPaths } = require('./src/hubs');
 const { lookup } = require('./src/lookup');
+const { careers, renderCareer, renderCareers, careerPaths } = require('./src/careers');
 const guard = require('./src/guard');
 const status = require('./src/status');
 const backup = require('./src/backup');
@@ -326,6 +327,13 @@ function seoRoutes(req, res, url) {
   if (p === '/tsql') return sendHtml(res, 200, renderIndex(originOf(req))), true;
   if (p === '/guides') return sendHtml(res, 200, renderGuides(originOf(req))), true;
   if (p === '/tools') return sendHtml(res, 200, renderTools(originOf(req))), true;
+  if (p === '/careers') return sendHtml(res, 200, renderCareers(originOf(req))), true;
+  const career = p.match(/^\/careers\/([a-z0-9-]+)$/);
+  if (career) {
+    const a = careers.find((x) => x.slug === career[1]);
+    if (!a) return false;
+    return sendHtml(res, 200, renderCareer(a, originOf(req))), true;
+  }
   const hubHtml = matchHub(p, originOf(req));
   if (hubHtml) return sendHtml(res, 200, hubHtml), true;
   const toolPage = p.match(/^\/tools\/([a-z0-9-]+)$/);
@@ -357,7 +365,7 @@ function seoRoutes(req, res, url) {
   if (p === '/sitemap.xml') {
     const o = originOf(req);
     const day = '2026-11-01';
-    const urls = [...sitemapPaths(), ...toolPaths(), ...hubPaths()];
+    const urls = [...sitemapPaths(), ...toolPaths(), ...hubPaths(), ...careerPaths()];
     res.writeHead(200, { 'Content-Type': 'application/xml; charset=utf-8' });
     res.end(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((u) => `  <url><loc>${o}${u}</loc><lastmod>${day}</lastmod></url>`).join('\n')}\n</urlset>\n`);
     return true;

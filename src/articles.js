@@ -3,13 +3,21 @@
 
 const { esc, sql, c, crumbBack } = require('./article-html');
 const extra = require('./topics');
+const enrich = require('./enrich');
+// Real-life guides: each opens with the request as it arrives, then works it through.
+const realLife = [
+  ...require('./guides-retail'), ...require('./guides-hr-finance'), ...require('./guides-saas'),
+  ...require('./guides-cleaning-windows'), ...require('./guides-operations'),
+];
 const { navInner, footerInner } = require('./nav');
 const { catalogSearch, searchBits, catalogCard, catalogIcon } = require('./search');
 
-const TOPIC_ORDER = ['At work', 'Joins', 'Dates', 'Window', 'Aggregates', 'Types', 'Functions'];
+const TOPIC_ORDER = ['At work', 'Reporting', 'Joins', 'Dates', 'Window', 'Aggregates', 'Cleaning', 'Types', 'Functions'];
 
 const TOPIC_BLURB = {
   'At work': 'Tickets from the desk: dates, JOINs that double a total, CTEs for a slide.',
+  Reporting: 'The numbers managers ask for: MRR, retention, headcount, aged debt, share of total.',
+  Cleaning: 'Messy names, phone numbers, labels and categories, fixed before you count them.',
   Joins: 'INNER, LEFT, RIGHT, FULL OUTER, CROSS APPLY — and the ON vs WHERE trap.',
   Dates: 'GETDATE, DATEADD, DATEDIFF, yesterday, last week, EOMONTH.',
   Window: 'ROW_NUMBER, RANK, LAG, LEAD, running totals.',
@@ -20,6 +28,8 @@ const TOPIC_BLURB = {
 
 const TOPIC_FEATURED = {
   'At work': ['why-select-star-fails', 'find-duplicate-customers', 'cte-for-reports'],
+  Reporting: ['monthly-recurring-revenue', 'cohort-retention', 'aged-debt-report'],
+  Cleaning: ['clean-phone-numbers', 'split-full-name', 'map-messy-categories'],
   Joins: ['left-join-is-null', 'join-doubled-my-totals', 'full-outer-join'],
   Dates: ['getdate', 'dateadd', 'last-week-orders'],
   Window: ['row-number', 'running-total', 'lag'],
@@ -29,6 +39,7 @@ const TOPIC_FEATURED = {
 };
 
 function topicOf(a) {
+  if (a.topic) return a.topic;
   const s = `${a.slug} ${a.name}`.toLowerCase();
   if (/join|doubled/.test(s)) return 'Joins';
   if (/getdate|dateadd|datediff|yesterday|last-week|between|datetime|eomonth|datepart|format date|date vs/.test(s)) return 'Dates';
@@ -627,7 +638,7 @@ WHERE order_date >= '2026-10-20'
   },
 ];
 
-const articles = core.concat(extra);
+const articles = core.concat(extra, realLife);
 
 const isGuide = (a) => a.kind === 'guide';
 const pathOf = (a) => isGuide(a) ? `/guides/${a.slug}` : `/tsql/${a.slug}`;
@@ -664,17 +675,23 @@ function page({ title, description, body, canonical, shell }) {
   <footer class="footer">${footerInner()}</footer>
   <script type="module" src="/js/back.js"></script>
   <script type="module" src="/js/cookies.js"></script>
+  <script type="module" src="/js/tables.js"></script>
 </body>
 </html>`;
 }
 
 function renderArticle(a, lesson, origin) {
   const hub = hubOf(a);
-  const others = articles.filter((x) => x !== a && isGuide(x) === isGuide(a)).slice(0, 5);
+  const topic = topicOf(a);
+  const i = articles.indexOf(a);
+  const near = (x) => Math.abs(articles.indexOf(x) - i);
+  const others = articles.filter((x) => x !== a)
+    .sort((x, y) => (topicOf(y) === topic) - (topicOf(x) === topic) || near(x) - near(y))
+    .slice(0, 6);
   const ld = {
     '@context': 'https://schema.org', '@type': isGuide(a) ? 'Article' : 'TechArticle',
     headline: a.title, description: a.description, proficiencyLevel: 'Beginner',
-    datePublished: '2026-10-31', dateModified: '2026-10-31',
+    datePublished: a.date || '2026-10-31', dateModified: a.date || (enrich[a.slug] ? '2026-11-08' : '2026-10-31'),
     author: { '@type': 'Organization', name: 'WorkSQL' },
     publisher: { '@type': 'Organization', name: 'WorkSQL', url: origin || 'https://worksql.com' },
     mainEntityOfPage: origin ? `${origin}${pathOf(a)}` : undefined,
@@ -690,6 +707,7 @@ function renderArticle(a, lesson, origin) {
     <div class="crumb">${crumbBack(hub.href)}<a href="${hub.href}">${esc(hub.label)}</a> › ${esc(a.name)}</div>
     <h1>${esc(a.title)}</h1>
     <p class="lede">${esc(a.lede)}</p>
+    ${enrich[a.slug] ? enrich[a.slug]() : ''}
     ${a.body()}
     ${tryIt}
     <section class="try" style="margin-top:16px">
